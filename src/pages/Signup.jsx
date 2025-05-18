@@ -1,18 +1,22 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import FormInput from '../components/FormInput';
 import Button from '../components/Button';
 import Photo from '../assets/photo-sign.svg';
 import logo from '../assets/logo-sign.svg';
-import { Link } from 'react-router-dom';
+import { authService } from '../services/api';
 
-
-const Signup = ({ onSwitchToLogin }) => {
+const Signup = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
   });
   
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState('');
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,15 +32,12 @@ const Signup = ({ onSwitchToLogin }) => {
         [name]: ''
       }));
     }
+    setServerError('');
   };
   
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.fullName) {
-      newErrors.fullName = 'Full name is required';
-    }
-
     if (!formData.username) {
       newErrors.username = 'Username is required';
     }
@@ -49,19 +50,28 @@ const Signup = ({ onSwitchToLogin }) => {
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError('');
     
     if (validateForm()) {
-      // Here you would typically make an API call to register
-      console.log('Register form submitted:', formData);
-      // For now, we'll just log the data
+      setIsLoading(true);
+      try {
+        await authService.register(formData);
+        navigate('/dashboard');
+      } catch (error) {
+        setServerError(error.response?.data?.message || 'An error occurred during registration');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   
@@ -69,36 +79,30 @@ const Signup = ({ onSwitchToLogin }) => {
     <div className="flex h-screen bg-gray-50">
       {/* Image Section - Hidden on mobile */}
       <div className="hidden md:block w-2/5 h-full relative">
-  {/* Background image */}
-  <img src={Photo} alt="Signup" className="w-full h-full object-cover" />
+        {/* Background image */}
+        <img src={Photo} alt="Signup" className="w-full h-full object-cover" />
 
-  {/* Overlay (noir avec opacity) */}
-  <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+        {/* Overlay (noir avec opacity) */}
+        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
 
-  {/* Logo positionné en haut à gauche */}
-  <div className="absolute top-4 left-4 z-10">
-  <Link to="/" className="hover:text-gray-300">
-    <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
-  </Link>
-  </div>
-</div>
-
+        {/* Logo positionné en haut à gauche */}
+        <div className="absolute top-4 left-4 z-10">
+          <Link to="/" className="hover:text-gray-300">
+            <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
+          </Link>
+        </div>
+      </div>
 
       {/* Form Section */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-50">
         <div className="w-full max-w-md p-8">
           <h2 className="text-3xl font-bold text-gray-800 mb-8">Create Account</h2>
+          {serverError && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {serverError}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <FormInput
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              placeholder="Full Name"
-              required
-              error={errors.fullName}
-            />
-            
             <FormInput
               type="text"
               name="username"
@@ -130,8 +134,8 @@ const Signup = ({ onSwitchToLogin }) => {
             />
             
             <div className="pt-4">
-              <Button type="submit" className="w-full">
-                Create Account
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </div>
             
