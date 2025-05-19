@@ -9,7 +9,6 @@ import Service1 from './pages/Service1';
 import Service2 from './pages/Service2';
 import ProtectedRoute from './components/ProtectedRoute';
 import Calendar from './pages/Calendar';
-import Reports from './pages/reports';
 import './App.css';
 
 const AppContent = () => {
@@ -49,22 +48,7 @@ const AppContent = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/calendar" 
-            element={
-              <ProtectedRoute>
-                <Calendar />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/reports" 
-            element={
-              <ProtectedRoute>
-                <Reports />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/calendar" element={<Calendar />} />
         </Routes>
       </div>
       {!hideFooter && <Footer />}
