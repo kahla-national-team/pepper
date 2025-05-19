@@ -58,10 +58,13 @@ const Login = () => {
     if (validateForm()) {
       setIsLoading(true);
       try {
-        await authService.login(formData.email, formData.password);
+        console.log('Submitting login form with:', { email: formData.email });
+        const response = await authService.login(formData.email, formData.password);
+        console.log('Login successful:', response);
         navigate('/dashboard');
       } catch (error) {
-        setServerError(error.response?.data?.message || 'An error occurred during login');
+        console.error('Login error in component:', error);
+        setServerError(error.message || 'An error occurred during login');
       } finally {
         setIsLoading(false);
       }

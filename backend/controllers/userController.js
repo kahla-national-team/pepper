@@ -58,18 +58,29 @@ const userController = {
   // Login user
   login: async (req, res) => {
     try {
+      console.log('Login request received:', { email: req.body.email });
       const { email, password } = req.body;
+
+      if (!email || !password) {
+        console.log('Missing credentials:', { email: !!email, password: !!password });
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
       const userModel = new User(req.app.locals.pool);
       
       // Find user
+      console.log('Finding user with email:', email);
       const user = await userModel.findByEmail(email);
       if (!user) {
+        console.log('User not found with email:', email);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
       // Check password
+      console.log('Checking password for user:', email);
       const isMatch = await userModel.comparePassword(password, user.password);
       if (!isMatch) {
+        console.log('Invalid password for user:', email);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
@@ -80,7 +91,9 @@ const userController = {
         { expiresIn: '24h' }
       );
 
+      console.log('Login successful for user:', email);
       res.json({
+        message: 'Login successful',
         token,
         user: {
           id: user.id,
@@ -89,7 +102,12 @@ const userController = {
         }
       });
     } catch (error) {
-      res.status(500).json({ message: 'Error logging in', error: error.message });
+      console.error('Login error:', error);
+      res.status(500).json({ 
+        message: 'Error logging in', 
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   },
 
