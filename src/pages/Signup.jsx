@@ -37,7 +37,7 @@ const Signup = () => {
   
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.username) {
       newErrors.username = 'Username is required';
     }
@@ -79,19 +79,19 @@ const Signup = () => {
     <div className="flex h-screen bg-gray-50">
       {/* Image Section - Hidden on mobile */}
       <div className="hidden md:block w-2/5 h-full relative">
-        {/* Background image */}
-        <img src={Photo} alt="Signup" className="w-full h-full object-cover" />
+  {/* Background image */}
+  <img src={Photo} alt="Signup" className="w-full h-full object-cover" />
 
-        {/* Overlay (noir avec opacity) */}
-        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+  {/* Overlay (noir avec opacity) */}
+  <div className="absolute inset-0 bg-black bg-opacity-40"></div>
 
-        {/* Logo positionné en haut à gauche */}
-        <div className="absolute top-4 left-4 z-10">
-          <Link to="/" className="hover:text-gray-300">
-            <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
-          </Link>
-        </div>
-      </div>
+  {/* Logo positionné en haut à gauche */}
+  <div className="absolute top-4 left-4 z-10">
+  <Link to="/" className="hover:text-gray-300">
+    <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
+  </Link>
+  </div>
+</div>
 
       {/* Form Section */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-50">

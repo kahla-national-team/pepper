@@ -10,5 +10,7 @@ router.post('/login', userController.login);
 
 // Protected routes
 router.get('/profile', auth, userController.getProfile);
+router.get('/fullname', auth, userController.getFullName);
+router.get('/email', auth, userController.getEmailAdress);
 
 module.exports = router; 

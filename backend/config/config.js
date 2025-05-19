@@ -5,7 +5,7 @@ module.exports = {
   pgConfig: {
     user: process.env.PG_USER || 'postgres',
     host: process.env.PG_HOST || 'localhost',
-    database: process.env.PG_DATABASE || 'butlerdb',
+    database: process.env.PG_DATABASE || 'butler',
     password: process.env.PG_PASSWORD || 'dembele',
     port: process.env.PG_PORT || 5432,
   },
@@ -14,7 +14,7 @@ module.exports = {
   corsOptions: {
     origin: process.env.NODE_ENV === 'production' 
       ? process.env.CORS_ORIGIN 
-      : 'http://localhost:3000',
+      : 'http://localhost:5173',
     credentials: true
   }
 }; 

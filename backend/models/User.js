@@ -19,7 +19,33 @@ class User {
     await this.pool.query(query);
   }
 
+  async ensureTableSchema() {
+    try {
+      // Check if full_name column exists
+      const checkColumnQuery = `
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'full_name';
+      `;
+      const result = await this.pool.query(checkColumnQuery);
+      
+      if (result.rows.length === 0) {
+        // Add full_name column if it doesn't exist
+        const addColumnQuery = `
+          ALTER TABLE users 
+          ADD COLUMN full_name VARCHAR(100) NOT NULL DEFAULT 'User';
+        `;
+        await this.pool.query(addColumnQuery);
+        console.log('Added full_name column to users table');
+      }
+    } catch (error) {
+      console.error('Error ensuring table schema:', error);
+      throw error;
+    }
+  }
+
   async create({ username, full_name, email, password }) {
+    await this.ensureTableSchema();
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = `
       INSERT INTO users (username, full_name, email, password)
@@ -32,12 +58,14 @@ class User {
   }
 
   async findByEmail(email) {
+    await this.ensureTableSchema();
     const query = 'SELECT id, username, full_name, email, created_at FROM users WHERE email = $1';
     const result = await this.pool.query(query, [email]);
     return result.rows[0];
   }
 
   async findById(id) {
+    await this.ensureTableSchema();
     const query = 'SELECT id, username, full_name, email, created_at FROM users WHERE id = $1';
     const result = await this.pool.query(query, [id]);
     return result.rows[0];

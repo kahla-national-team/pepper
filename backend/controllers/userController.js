@@ -24,9 +24,10 @@ const userController = {
         return res.status(400).json({ message: 'User already exists' });
       }
 
-      // Create new user
-      console.log('Creating new user:', { username, email });
-      const user = await userModel.create({ username, email, password });
+      // Create new user with full_name derived from username
+      const full_name = username.charAt(0).toUpperCase() + username.slice(1);
+      console.log('Creating new user:', { username, email, full_name });
+      const user = await userModel.create({ username, email, password, full_name });
       console.log('User created successfully:', user);
 
       // Generate JWT token
@@ -42,7 +43,8 @@ const userController = {
         user: {
           id: user.id,
           username: user.username,
-          email: user.email
+          email: user.email,
+          full_name: user.full_name
         }
       });
     } catch (error) {
@@ -122,6 +124,34 @@ const userController = {
       res.json(user);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching profile', error: error.message });
+    }
+  },
+
+  // Get user's full name
+  getFullName: async (req, res) => {
+    try {
+      const userModel = new User(req.app.locals.pool);
+      const user = await userModel.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json({ full_name: user.full_name });
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching full name', error: error.message });
+    }
+  },
+
+  //GET USER EMAIL
+  getEmailAdress: async (req, res) => {
+    try {
+      const userModel = new User(req.app.locals.pool);
+      const user = await userModel.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json({ email: user.email });
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching email', error: error.message });
     }
   }
 };
