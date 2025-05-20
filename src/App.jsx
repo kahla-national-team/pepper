@@ -7,6 +7,9 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Service1 from './pages/Service1';
 import Service2 from './pages/Service2';
+import ProtectedRoute from './components/ProtectedRoute';
+import Calendar from './pages/Calendar';
+import Reports from './pages/reports';
 import './App.css';
 
 const AppContent = () => {
@@ -22,9 +25,32 @@ const AppContent = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/service1" element={<Service1 />} />
-          <Route path="/service2" element={<Service2 />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/service1" 
+            element={
+              <ProtectedRoute>
+                <Service1 />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/service2" 
+            element={
+              <ProtectedRoute>
+                <Service2 />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/reports" element={<Reports />} />
         </Routes>
       </div>
       {!hideFooter && <Footer />}
