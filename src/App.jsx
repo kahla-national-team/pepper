@@ -9,6 +9,7 @@ import Service1 from './pages/Service1';
 import Service2 from './pages/Service2';
 import ProtectedRoute from './components/ProtectedRoute';
 import Calendar from './pages/Calendar';
+import Reports from './pages/reports';
 import './App.css';
 
 const AppContent = () => {
@@ -49,6 +50,7 @@ const AppContent = () => {
             } 
           />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/reports" element={<Reports />} />
         </Routes>
       </div>
       {!hideFooter && <Footer />}
