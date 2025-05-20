@@ -158,9 +158,12 @@ const Dashboard = () => {
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4 text-[#ff385c]">Quick Actions</h2>
             <div className="space-y-4">
-              <button className="w-full bg-[#ff385c] text-white py-3 px-4 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2">
+              <button
+                onClick={() => navigate('/add-property')}
+                className="w-full bg-[#ff385c] text-white py-3 px-4 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+              >
                 <FaPlus />
-                <span>Add New Property</span>
+                <span>Add Property</span>
               </button>
               <button className="w-full bg-[#ff385c] text-white py-3 px-4 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2">
                 <FaCalendarAlt />

@@ -10,6 +10,7 @@ import Service2 from './pages/Service2';
 import ProtectedRoute from './components/ProtectedRoute';
 import Calendar from './pages/Calendar';
 import Reports from './pages/reports';
+import PropertyForm from './components/PropertyForm';
 import './App.css';
 
 const AppContent = () => {
@@ -51,6 +52,11 @@ const AppContent = () => {
           />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/add-property" element={
+            <ProtectedRoute>
+              <PropertyForm />
+            </ProtectedRoute>
+          } />
         </Routes>
       </div>
       {!hideFooter && <Footer />}

@@ -74,6 +74,13 @@ class User {
   async comparePassword(candidatePassword, hashedPassword) {
     return bcrypt.compare(candidatePassword, hashedPassword);
   }
+
+  async findByEmailOrUsername(identifier) {
+    await this.ensureTableSchema();
+    const query = 'SELECT * FROM users WHERE email = $1 OR username = $1';
+    const result = await this.pool.query(query, [identifier]);
+    return result.rows[0];
+  }
 }
 
 module.exports = User; 

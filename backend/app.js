@@ -7,6 +7,8 @@ const { Pool } = require('pg');
 
 // Import routes
 const routes = require('./routes');
+const userRoutes = require('./routes/userRoutes');
+const propertyRoutes = require('./routes/propertyRoutes');
 
 const app = express();
 
@@ -44,6 +46,8 @@ app.locals.pool = pool;
 
 // Routes
 app.use('/api', routes);
+app.use('/api/users', userRoutes);
+app.use('/api/properties', propertyRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

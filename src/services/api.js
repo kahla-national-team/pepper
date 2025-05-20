@@ -19,10 +19,10 @@ api.interceptors.request.use((config) => {
 });
 
 export const authService = {
-  login: async (email, password) => {
+  login: async (identifier, password) => {
     try {
-      console.log('Attempting login with:', { email });
-      const response = await api.post('/users/login', { email, password });
+      console.log('Attempting login with:', { identifier });
+      const response = await api.post('/users/login', { identifier, password });
       console.log('Login response:', response.data);
       
       if (response.data.token) {

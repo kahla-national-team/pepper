@@ -60,29 +60,29 @@ const userController = {
   // Login user
   login: async (req, res) => {
     try {
-      console.log('Login request received:', { email: req.body.email });
-      const { email, password } = req.body;
+      console.log('Login request received:', { identifier: req.body.identifier });
+      const { identifier, password } = req.body;
 
-      if (!email || !password) {
-        console.log('Missing credentials:', { email: !!email, password: !!password });
-        return res.status(400).json({ message: 'Email and password are required' });
+      if (!identifier || !password) {
+        console.log('Missing credentials:', { identifier: !!identifier, password: !!password });
+        return res.status(400).json({ message: 'Username/Email and password are required' });
       }
 
       const userModel = new User(req.app.locals.pool);
       
-      // Find user
-      console.log('Finding user with email:', email);
-      const user = await userModel.findByEmail(email);
+      // Find user by email or username
+      console.log('Finding user with identifier:', identifier);
+      const user = await userModel.findByEmailOrUsername(identifier);
       if (!user) {
-        console.log('User not found with email:', email);
+        console.log('User not found with identifier:', identifier);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
       // Check password
-      console.log('Checking password for user:', email);
+      console.log('Checking password for user:', identifier);
       const isMatch = await userModel.comparePassword(password, user.password);
       if (!isMatch) {
-        console.log('Invalid password for user:', email);
+        console.log('Invalid password for user:', identifier);
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
@@ -93,7 +93,7 @@ const userController = {
         { expiresIn: '24h' }
       );
 
-      console.log('Login successful for user:', email);
+      console.log('Login successful for user:', identifier);
       res.json({
         message: 'Login successful',
         token,

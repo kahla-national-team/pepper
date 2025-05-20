@@ -9,8 +9,7 @@ import { authService } from '../services/api';
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
+    identifier: '',
     password: '',
   });
   
@@ -38,12 +37,8 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.username && !formData.email) {
-      newErrors.username = 'Username or Email is required';
-    }
-    
-    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+    if (!formData.identifier) {
+      newErrors.identifier = 'Username or Email is required';
     }
     
     if (!formData.password) {
@@ -61,14 +56,8 @@ const Login = () => {
     if (validateForm()) {
       setIsLoading(true);
       try {
-        // Use either username or email as the identifier
-        const identifier = formData.username || formData.email;
-        if (!formData.password) {
-          throw new Error('Password is required');
-        }
-        
-        console.log('Submitting login form with:', { identifier });
-        const response = await authService.login(identifier, formData.password);
+        console.log('Submitting login form with:', { identifier: formData.identifier });
+        const response = await authService.login(formData.identifier, formData.password);
         console.log('Login successful:', response);
         navigate('/dashboard');
       } catch (error) {
@@ -110,29 +99,12 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <FormInput
               type="text"
-              name="username"
-              value={formData.username}
+              name="identifier"
+              value={formData.identifier}
               onChange={handleChange}
-              placeholder="Username"
-              error={errors.username}
-            />
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">or</span>
-              </div>
-            </div>
-            
-            <FormInput
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Email"
-              error={errors.email}
+              placeholder="Username or Email"
+              required
+              error={errors.identifier}
             />
             
             <FormInput
