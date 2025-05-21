@@ -5,7 +5,7 @@ import Button from '../components/Button';
 import photo from '../assets/photo-sign.svg';
 import logo from '../assets/logo-sign.svg';
 
-const Login = ({ onSwitchToRegister }) => {
+const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -52,29 +52,32 @@ const Login = ({ onSwitchToRegister }) => {
     if (validateForm()) {
       // Here you would typically make an API call to authenticate
       console.log('Login form submitted:', formData);
-      // For now, we'll just log the data
     }
   };
   
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="relative flex h-screen bg-gray-50">
+      {/* Mobile Logo Container */}
+      <div className="absolute top-4 left-4 z-20 md:hidden">
+        <Link to="/" className="hover:text-gray-300">
+          <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
+        </Link>
+      </div>
+
       {/* Image Section - Hidden on mobile */}
       <div className="hidden md:block w-2/5 h-full relative">
-  {/* Background image */}
-  <img src={photo} alt="Signup" className="w-full h-full object-cover" />
-
-  {/* Overlay (noir avec opacity) */}
-  <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-
-  {/* Logo positionné en haut à gauche */}
-  <div className="absolute top-4 left-4 z-10">
-  <Link to="/" className="hover:text-gray-300">
-    <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
-  </Link>
-  </div>
-</div>
-
-
+        {/* Background image */}
+        <img src={photo} alt="Signup" className="w-full h-full object-cover" />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+        {/* Logo for desktop */}
+        <div className="absolute top-4 left-4 z-10">
+          <Link to="/" className="hover:text-gray-300">
+            <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
+          </Link>
+        </div>
+      </div>
+      
       {/* Form Section */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-50">
         <div className="w-full max-w-md p-8">
@@ -108,8 +111,7 @@ const Login = ({ onSwitchToRegister }) => {
             
             <div className="text-center mt-4 text-sm">
               <span className="text-gray-600">Don't have an account? </span>
-                <Link to="/signup" className="hover:text-red-300"> Sign up </Link>
-               
+              <Link to="/signup" className="hover:text-red-300"> Sign up </Link>
             </div>
           </form>
         </div>
@@ -118,4 +120,4 @@ const Login = ({ onSwitchToRegister }) => {
   );
 };
 
-export default Login; 
+export default Login;
