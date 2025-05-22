@@ -7,9 +7,8 @@ import StaysCard from '../components/StaysCard';
 import ServiceCard from '../components/ServiceCard';
 import ServiceMap from '../components/ServiceMap';
 import MapToggleWrapper from '../components/MapToggleWrapper';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useMapVisibility } from '../context/MapVisibilityContext';
-
+import SearchBar from '../components/serviceSearchBar';
 // Sample data for stays
 const stays = [
   {
@@ -153,10 +152,26 @@ const services = [
 const Home = () => {
   const [selectedStay, setSelectedStay] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
-  // Remove searchFilters state as filtering will be handled by Navbar search
-  // const [searchFilters, setSearchFilters] = useState({});
+  const [filters, setFilters] = useState({
+    destination: '',
+    dates: { start: null, end: null },
+    guests: { adults: 1, children: 0, babies: 0 },
+    amenities: [],
+    rating: 0,
+    favorites: false,
+    priceRange: { min: 0, max: 1000 }
+  });
 
   const { isMapVisible } = useMapVisibility();
+
+  const handleSearch = (value) => {
+    // Implement search logic here
+    console.log('Searching for:', value);
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+  };
 
   // Component for rendering a section with cards
   const Section = ({ title, items, onItemSelect, selectedItem, ItemCard }) => (
@@ -185,11 +200,15 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white"> 
-      <div className="flex flex-col lg:flex-row">
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <SearchBar 
+          onSearch={handleSearch}
+          onFilterChange={handleFilterChange}
+          filters={filters}
+        />
         {/* Main content - Add padding-top to account for fixed Navbar + search bar */}
         <div className={`w-full transition-all duration-300 ${isMapVisible ? 'lg:w-1/2' : 'lg:w-full'}`}>
           <main className="container mx-auto px-4 py-4 sm:py-8 pt-[120px]"> {/* Adjusted padding-top based on Navbar height */}
-
             {/* Stays Section */}
             <Section
               title="Available Stays"
