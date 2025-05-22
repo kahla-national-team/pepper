@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useMapVisibility } from '../context/MapVisibilityContext';
 import ServiceCard from '../components/ServiceCard';
-import tele from "../assets/tele.webp"
+
 const services = [
   {
     id: 1,
@@ -13,7 +13,7 @@ const services = [
       name: "Gourmet Chefs",
       rating: 4.9,
       reviewCount: 156,
-      image: tele
+      image: "/chef1.jpg"
     },
     image: "/chef-service.jpg",
     address: "Available in your location"

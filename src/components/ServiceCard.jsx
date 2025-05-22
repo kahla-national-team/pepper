@@ -1,8 +1,9 @@
 "use client";
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion';
 
 const ServiceCard = ({ service, isSelected, onClick }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -13,14 +14,25 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
   const {
     id,
     type,
+    title = 'Service Title',
+    description = 'Service description', 
+    price = '$0/hour',
+    provider = { 
+      name: 'Provider', 
+      rating: 5, 
+      reviewCount: 0,
+      image: '/placeholder-avatar.png'
+    },
     image = '/placeholder-service.jpg'
   } = service;
 
   // Handle click to navigate and potentially select
   const handleClick = () => {
+    // Call the original onClick prop (for selection in parent component)
     if (onClick) {
       onClick();
     }
+    // Navigate to the details page
     if (id && type) {
       navigate(`/details/${type}/${id}`);
     }
@@ -39,7 +51,7 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
       <div className="relative h-48">
         <img
           src={image}
-          alt="Service"
+          alt={title}
           className="w-full h-full object-cover"
           onLoad={() => setIsLoading(false)}
           onError={() => {
@@ -58,6 +70,32 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
           </div>
         )}
       </div>
+
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+          <span className="text-blue-600 font-semibold">{price}</span>
+        </div>
+        
+        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{description}</p>
+        
+        <div className="flex items-center">
+          <img
+            src={provider.image}
+            alt={provider.name}
+            className="w-8 h-8 rounded-full mr-2"
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-800">{provider.name}</p>
+            <div className="flex items-center">
+              <span className="text-yellow-400">★</span>
+              <span className="text-sm text-gray-600 ml-1">
+                {provider.rating} ({provider.reviewCount} reviews)
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 };
@@ -66,7 +104,17 @@ ServiceCard.propTypes = {
   service: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     type: PropTypes.string.isRequired,
-    image: PropTypes.string
+    title: PropTypes.string,
+    description: PropTypes.string,
+    price: PropTypes.string,
+    provider: PropTypes.shape({
+      name: PropTypes.string,
+      rating: PropTypes.number,
+      reviewCount: PropTypes.number,
+      image: PropTypes.string
+    }),
+    image: PropTypes.string,
+    address: PropTypes.string
   }).isRequired,
   isSelected: PropTypes.bool,
   onClick: PropTypes.func

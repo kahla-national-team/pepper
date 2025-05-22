@@ -102,4 +102,5 @@ StaysCard.propTypes = {
   onClick: PropTypes.func
 };
 
-export default StaysCard; 
+export default StaysCard;
+

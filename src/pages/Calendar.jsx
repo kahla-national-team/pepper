@@ -194,51 +194,6 @@ const Calendar = () => {
     return days;
   };
 
-  const renderPropertyAvailability = () => {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {properties.map((property) => (
-          <div 
-            key={property.id}
-            className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300"
-          >
-            <div className="relative h-48">
-              <img 
-                src={property.image} 
-                alt={property.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute top-4 right-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  property.status === 'available' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {property.status === 'available' ? 'Available' : 'Booked'}
-                </span>
-              </div>
-            </div>
-            <div className="p-6">
-              <h3 className="font-bold text-xl text-gray-800 mb-2">{property.name}</h3>
-              <p className="text-gray-600 mb-4">{property.location}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-[#ff385c] font-bold">{property.price}</span>
-                <button 
-                  onClick={() => {
-                    setSelectedProperty(property);
-                    setView('calendar');
-                  }}
-                  className="bg-[#ff385c] text-white px-4 py-2 rounded-xl hover:bg-[#ff385c]/90 transition-all"
-                >
-                  View Calendar
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">

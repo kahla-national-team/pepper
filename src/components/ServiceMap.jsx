@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
-const libraries = ['places'];
 
 const ServiceMap = ({ services, selectedService }) => {
   const mapRef = useRef(null);
@@ -11,54 +10,67 @@ const ServiceMap = ({ services, selectedService }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initMap = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Load the Google Maps JavaScript API
-        const { Map } = await google.maps.importLibrary("maps");
-        const { Marker } = await google.maps.importLibrary("marker");
-
-        // Create the map instance
-        const map = new Map(mapRef.current, {
-          center: { lat: 35.6971, lng: -0.6337 }, // Default to Oran, Algeria
-          zoom: 12,
-          mapId: "AIzaSyB1sD5MQKu-bQhgQWmTOzwjVCvPRMdpyMI", // Replace with your map ID
-          disableDefaultUI: true,
-          zoomControl: true,
-        });
-
-        // Clear existing markers
-        markersRef.current.forEach(marker => marker.setMap(null));
-        markersRef.current = [];
-
-        // Add markers for each service
-        services.forEach(service => {
-          if (service.location) {
-            const marker = new Marker({
-              position: service.location,
-              map,
-              title: service.title,
-            });
-
-            markersRef.current.push(marker);
-          }
-        });
-
-        // Center map on selected service if any
-        if (selectedService && selectedService.location) {
-          map.setCenter(selectedService.location);
-          map.setZoom(15);
-        }
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error loading map:', error);
-        setError('Failed to load map. Please try again later.');
-        setIsLoading(false);
+  const loadGoogleMapsScript = () => {
+    return new Promise((resolve, reject) => {
+      if (window.google && window.google.maps) {
+        resolve();
+      } else {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyB1sD5MQKu-bQhgQWmTOzwjVCvPRMdpyMI&libraries=places`;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
       }
-    };
+    });
+  };
+
+  const initMap = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Ensure Google Maps JS API is loaded
+      await loadGoogleMapsScript();
+
+      // Create the map instance
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: { lat: 35.6971, lng: -0.6337 }, // Default to Oran, Algeria
+        zoom: 12,
+        disableDefaultUI: true,
+        zoomControl: true,
+      });
+
+      // Clear existing markers
+      markersRef.current.forEach(marker => marker.setMap(null));
+      markersRef.current = [];
+
+      // Add markers for each service
+      services.forEach(service => {
+        if (service.location) {
+          const marker = new window.google.maps.Marker({
+            position: service.location,
+            map,
+            title: service.title,
+          });
+
+          markersRef.current.push(marker);
+        }
+      });
+
+      // Center map on selected service if any
+      if (selectedService && selectedService.location) {
+        map.setCenter(selectedService.location);
+        map.setZoom(15);
+      }
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error loading map:', error);
+      setError('Failed to load map. Please try again later.');
+      setIsLoading(false);
+    }
+  };
 
     if (mapRef.current) {
       initMap();

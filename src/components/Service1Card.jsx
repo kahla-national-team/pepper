@@ -2,7 +2,8 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 // The motion import is used in the component for motion.div
-import { motion } from 'framer-motion'; // Add this import at the top
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion'; 
 
 const Service1Card = ({ service, isSelected, onClick }) => {
   const [isLoading, setIsLoading] = useState(true);

@@ -1,315 +1,108 @@
-import { useState, useEffect, useRef } from 'react';
-import SearchIcon from '../assets/groupe2.svg';
-import vector3 from '../assets/Vector(3).svg';
-import '../styles/servicesearchbar.css';
+import React, { useState } from 'react';
+import '../styles/listingcard.css';
 
-// Sample service categories for suggestions
-const serviceCategories = [
-  { id: 1, name: 'Personal Assistant', type: 'Service' },
-  { id: 2, name: 'Event Planning', type: 'Service' },
-  { id: 3, name: 'Travel Arrangements', type: 'Service' },
-  { id: 4, name: 'Restaurant Reservations', type: 'Service' },
-  { id: 5, name: 'VIP Access', type: 'Service' },
-  { id: 6, name: 'Shopping Services', type: 'Service' },
-  { id: 7, name: 'Transportation', type: 'Service' },
-  { id: 8, name: 'Home Services', type: 'Service' },
-  { id: 9, name: 'Health & Wellness', type: 'Service' },
-  { id: 10, name: 'Business Services', type: 'Service' }
-];
+const ListingCard = ({ listing, onToggleFavorite, isFavorite }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-const urgencyOptions = [
-  { id: 'urgent', label: 'Urgent', icon: '⚡' },
-  { id: 'standard', label: 'Standard', icon: '⏱️' },
-  { id: 'flexible', label: 'Flexible', icon: '🔄' }
-];
+  // Ensure listing.images exists, otherwise use a default array with the single image
+  const images = listing?.images || [listing?.image || ''];
 
-function SearchBar({ onSearch, onFilterChange, filters }) {
-  const [isGuestOpen, setIsGuestOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isSmall, setIsSmall] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const dropdownRef = useRef(null);
-  const filterRef = useRef(null);
-  const destinationRef = useRef(null);
-
-  const serviceTypes = [
-    { id: 'personal', label: 'Personal', icon: '👤' },
-    { id: 'business', label: 'Business', icon: '💼' },
-    { id: 'luxury', label: 'Luxury', icon: '✨' },
-    { id: 'emergency', label: 'Emergency', icon: '🚨' }
-  ];
-
-  const availabilityOptions = [
-    { value: '24/7', label: '24/7 Available' },
-    { value: 'business', label: 'Business Hours' },
-    { value: 'custom', label: 'Custom Hours' }
-  ];
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      setIsScrolled(scrollPosition > 50);
-      setIsSmall(window.innerWidth <= 768 || scrollPosition > 50);
-    };
-
-    const handleResize = () => {
-      setIsSmall(window.innerWidth <= 768);
-    };
-
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsGuestOpen(false);
-      }
-      if (filterRef.current && !filterRef.current.contains(event.target)) {
-        setIsFilterOpen(false);
-      }
-      if (destinationRef.current && !destinationRef.current.contains(event.target)) {
-        setShowSuggestions(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleResize);
-    document.addEventListener('mousedown', handleClickOutside);
-    handleResize();
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handleServiceTypeChange = (type, value) => {
-    onFilterChange({
-      ...filters,
-      [type]: value
-    });
+  const nextImage = (e) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => 
+      prev === images.length - 1 ? 0 : prev + 1
+    );
   };
 
-  const toggleServiceType = (serviceId) => {
-    const newServiceTypes = filters.serviceTypes.includes(serviceId)
-      ? filters.serviceTypes.filter(id => id !== serviceId)
-      : [...filters.serviceTypes, serviceId];
-    
-    onFilterChange({
-      ...filters,
-      serviceTypes: newServiceTypes
-    });
+  const prevImage = (e) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? images.length - 1 : prev - 1
+    );
   };
 
-  const handleAvailabilityChange = (availability) => {
-    onFilterChange({
-      ...filters,
-      availability: filters.availability === availability ? null : availability
-    });
+  const goToImage = (index, e) => {
+    e.stopPropagation();
+    setCurrentImageIndex(index);
   };
 
-  const handleSearchInput = (e) => {
-    const value = e.target.value;
-    setSearchInput(value);
-    onSearch(value);
-  };
-
-  const handleSearchButtonClick = () => {
-    onSearch(filters.service);
-  };
-
-  const handleServiceChange = (e) => {
-    const value = e.target.value;
-    onFilterChange({
-      ...filters,
-      service: value
-    });
-    
-    if (value.trim()) {
-      const filteredSuggestions = serviceCategories.filter(service =>
-        service.name.toLowerCase().includes(value.toLowerCase())
-      );
-      setSuggestions(filteredSuggestions);
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-      setSuggestions([]);
-    }
-    
-    onSearch(value);
-  };
-
-  const handleSuggestionClick = (suggestion) => {
-    onFilterChange({
-      ...filters,
-      service: suggestion.name
-    });
-    setShowSuggestions(false);
-    onSearch(suggestion.name);
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation();
+    onToggleFavorite(listing.id);
   };
 
   return (
-    <div className={`search-container ${isScrolled ? 'scrolled' : ''} ${isSmall ? 'small' : ''}`}>
-      <div className="search-block">
-        <div className="search-item" ref={destinationRef}>
-          <label>What Service</label>
-          <input 
-            type="text" 
-            placeholder="Search services" 
-            value={filters.service}
-            onChange={handleServiceChange}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSearchButtonClick();
-                setShowSuggestions(false);
-              }
-            }}
-            onFocus={() => {
-              if (filters.service.trim()) {
-                setShowSuggestions(true);
-              }
-            }}
-          />
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="destination-suggestions">
-              {suggestions.map(suggestion => (
-                <div
-                  key={suggestion.id}
-                  className="suggestion-item"
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  <div className="suggestion-content">
-                    <span className="suggestion-name">{suggestion.name}</span>
-                    <span className="suggestion-type">{suggestion.type}</span>
-                  </div>
-                </div>
-              ))}
+    <div className="listing-card">
+      <div className="listing-image">
+        <div className="carousel-container">
+          {images.map((image, index) => (
+            <div
+              key={index}
+              className={`carousel-slide ${index === currentImageIndex ? 'active' : ''}`}
+            >
+              <img src={image} alt={`${listing?.title || 'Listing'} - ${index + 1}`} />
             </div>
+          ))}
+          {images.length > 1 && (
+            <>
+              <button className="carousel-button prev" onClick={prevImage}>
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+                  <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              <button className="carousel-button next" onClick={nextImage}>
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+                  <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              <div className="carousel-dots">
+                {images.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`carousel-dot ${index === currentImageIndex ? 'active' : ''}`}
+                    onClick={(e) => goToImage(index, e)}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
-        <div className="search-divider"></div>
-        
-        <div className="search-item">
-          <label>When</label>
-          <input 
-            type="datetime-local" 
-            min={new Date().toISOString().slice(0, 16)}
-            value={filters.when || ''}
-            onChange={(e) => handleServiceTypeChange('when', e.target.value)}
-          />
-        </div>
-        <div className="search-divider"></div>
-        
-        <div className="search-item">
-          <label>Location</label>
-          <input 
-            type="text" 
-            placeholder="Enter location"
-            value={filters.location || ''}
-            onChange={(e) => handleServiceTypeChange('location', e.target.value)}
-          />
-        </div>
-        
+        <div className="listing-price">${listing?.price || 0}/night</div>
         <button 
-          className="search-button"
-          onClick={handleSearchButtonClick}
+          className={`like-button ${isFavorite ? 'liked' : ''}`} 
+          onClick={handleFavoriteClick}
         >
-          <img src={SearchIcon} alt="Search" className="search-icon" />
+          <svg viewBox="0 0 24 24" fill={isFavorite ? "currentColor" : "none"} xmlns="http://www.w3.org/2000/svg" className="like-icon">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
       </div>
       
-      <div className="filter-container" ref={filterRef}>
-        <button 
-          className="filter-button"
-          onClick={() => setIsFilterOpen(!isFilterOpen)}
-        >
-          <img src={vector3} alt="Filter" className="filter-icon" />
-          <span>Filters</span>
-        </button>
-        
-        {isFilterOpen && (
-          <div className="filter-dropdown">
-            <div className="filter-section">
-              <h3>Service Type</h3>
-              <div className="service-types-grid">
-                {serviceTypes.map(service => (
-                  <button
-                    key={service.id}
-                    className={`service-type-button ${filters.serviceTypes.includes(service.id) ? 'active' : ''}`}
-                    onClick={() => toggleServiceType(service.id)}
-                  >
-                    <span className="service-icon">{service.icon}</span>
-                    <span className="service-label">{service.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="filter-section">
-              <h3>Urgency</h3>
-              <div className="urgency-options">
-                {urgencyOptions.map(option => (
-                  <button
-                    key={option.id}
-                    className={`urgency-button ${filters.urgency === option.id ? 'active' : ''}`}
-                    onClick={() => handleServiceTypeChange('urgency', option.id)}
-                  >
-                    <span className="urgency-icon">{option.icon}</span>
-                    <span className="urgency-label">{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="filter-section">
-              <h3>Availability</h3>
-              <div className="availability-options">
-                {availabilityOptions.map(option => (
-                  <button
-                    key={option.value}
-                    className={`availability-button ${filters.availability === option.value ? 'active' : ''}`}
-                    onClick={() => handleAvailabilityChange(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="filter-section">
-              <h3>Budget Range</h3>
-              <div className="price-range-slider">
-                <div className="price-inputs">
-                  <div className="price-input-group">
-                    <label>Min</label>
-                    <input
-                      type="number"
-                      value={filters.budget.min}
-                      onChange={(e) => handleServiceTypeChange('budget', { ...filters.budget, min: parseInt(e.target.value) || 0 })}
-                      min="0"
-                      max={filters.budget.max}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="price-input-group">
-                    <label>Max</label>
-                    <input
-                      type="number"
-                      value={filters.budget.max}
-                      onChange={(e) => handleServiceTypeChange('budget', { ...filters.budget, max: parseInt(e.target.value) || 1000 })}
-                      min={filters.budget.min}
-                      max="10000"
-                      placeholder="10000"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div className="listing-content">
+        <div className="listing-header">
+          <h3 className="listing-title">{listing?.title || 'Untitled Listing'}</h3>
+          <div className="listing-rating">
+            <span className="rating">★ {listing?.rating || 0}</span>
+            <span className="reviews">({listing?.reviews || 0} reviews)</span>
           </div>
-        )}
+        </div>
+        
+        <div className="listing-location">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="location-icon">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zM12 11.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span>{listing?.location || 'Location not specified'}</span>
+        </div>
+
+        <button className="listing-cta">
+          Book Now
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="cta-icon">
+            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
   );
-}
+};
 
-export default SearchBar;
+export default ListingCard;

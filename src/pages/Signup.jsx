@@ -6,18 +6,17 @@ import Photo from '../assets/photo-sign.svg';
 import logo from '../assets/logo-sign.svg';
 import { authService } from '../services/api';
 
-
-const Signup = ({ onSwitchToLogin }) => {
+const Signup = () => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
   });
-  
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState('');
-  
+  const navigate = useNavigate(); // <-- Make sure this is here
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -65,7 +64,11 @@ const Signup = ({ onSwitchToLogin }) => {
     if (validateForm()) {
       setIsLoading(true);
       try {
-        await authService.register(formData);
+        const response = await authService.register(formData);
+        // If your backend returns a token, you can save it:
+        if (response && response.token) {
+          localStorage.setItem('token', response.token);
+        }
         navigate('/dashboard');
       } catch (error) {
         setServerError(error.response?.data?.message || 'An error occurred during registration');

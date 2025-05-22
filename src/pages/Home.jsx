@@ -159,7 +159,7 @@ const Home = () => {
   const { isMapVisible } = useMapVisibility();
 
   // Component for rendering a section with cards
-  const Section = ({ title, items, onItemSelect, selectedItem, ItemCard }) => (
+  const Section = ({ title, items, onItemSelect, selectedItem, CardComponent }) => (
     <section className="mb-8 sm:mb-12">
       <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">{title}</h2>
       <div className={`grid gap-4 sm:gap-6 ${
@@ -168,9 +168,9 @@ const Home = () => {
           : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
       }`}>
         {items.map((item) => (
-          <ItemCard 
+          <CardComponent 
             key={item.id}
-            service={item}
+            {...(CardComponent === StaysCard ? { stay: item } : { service: item })}
             isSelected={selectedItem?.id === item.id}
             onClick={() => onItemSelect(item)}
           />
@@ -196,7 +196,7 @@ const Home = () => {
               items={filteredStays}
               onItemSelect={setSelectedStay}
               selectedItem={selectedStay}
-              ItemCard={StaysCard}
+              CardComponent={StaysCard}
             />
 
             {/* Services Section */}
@@ -205,7 +205,7 @@ const Home = () => {
               items={filteredServices}
               onItemSelect={setSelectedService}
               selectedItem={selectedService}
-              ItemCard={ServiceCard}
+              CardComponent={ServiceCard}
             />
           </main>
         </div>
