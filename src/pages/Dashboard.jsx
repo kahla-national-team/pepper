@@ -280,4 +280,11 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+const StatCard = ({ label, value }) => (
+  <div className="bg-white shadow rounded-xl p-4 text-center">
+    <div className="text-xl font-bold">{value}</div>
+    <div className="text-sm text-gray-500">{label}</div>
+  </div>
+);
+
+export default Dashboard;

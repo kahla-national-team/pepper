@@ -1,0 +1,341 @@
+.search-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: white;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.search-bar.scrolled {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.search-bar.small {
+    padding: 0.5rem;
+}
+
+.search-bar.mobile {
+    top: 64px; /* Height of the navbar */
+    padding: 0.5rem;
+}
+
+.search-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Mobile Layout */
+.mobile-search-layout {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mobile-search-row {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.mobile-search-row .date-inputs {
+    flex: 1;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mobile-search-row .date-inputs input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+
+.mobile-search-row .guest-selector-container,
+.mobile-search-row .filter-container {
+    flex: 1;
+}
+
+.mobile-search-row .guest-button,
+.mobile-search-row .filter-button {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.mobile-search-row .search-button {
+    padding: 0.5rem;
+    background: #2563eb;
+    border: none;
+    border-radius: 0.375rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-search-row .search-button img {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Desktop Layout */
+.search-container > * {
+    flex: 1;
+}
+
+.search-container > *:last-child {
+    flex: 0 0 auto;
+}
+
+.date-inputs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.date-inputs input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+}
+
+.guest-button,
+.filter-button {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.search-button {
+    padding: 0.5rem;
+    background: #2563eb;
+    border: none;
+    border-radius: 0.375rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-button img {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Dropdowns */
+.guest-selector-container,
+.filter-container {
+    position: relative;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .search-bar {
+        padding: 0.5rem;
+    }
+
+    .search-container {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .date-inputs {
+        flex-direction: column;
+    }
+
+    .guest-button,
+    .filter-button {
+        font-size: 0.875rem;
+    }
+}
+
+/* Ensure dropdowns appear above other content */
+.guest-selector-container > div,
+.filter-container > div {
+    z-index: 1001;
+}
+
+/* Destination Input */
+.destination-input {
+    flex: 2;
+    position: relative;
+}
+
+.destination-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+}
+
+.suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.suggestion-item {
+    padding: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.suggestion-item:hover {
+    background: #f7fafc;
+}
+
+.suggestion-type {
+    color: #718096;
+    font-size: 0.875rem;
+}
+
+/* Guest Selector */
+.guest-selector {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.guest-type {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.guest-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guest-controls button {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    background: white;
+    cursor: pointer;
+}
+
+.guest-controls input {
+    width: 3rem;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    padding: 0.25rem;
+}
+
+/* Filter Panel */
+.filter-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 300px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.amenity-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    background: white;
+    cursor: pointer;
+}
+
+.amenity-button.active {
+    background: #ebf8ff;
+    border-color: #4299e1;
+}
+
+.ratings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.rating-button {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rating-button.active {
+    background: #ebf8ff;
+    border-color: #4299e1;
+}
+
+.price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.price-inputs input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+}

@@ -70,7 +70,14 @@ const Login = () => {
   };
   
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="relative flex h-screen bg-gray-50">
+      {/* Mobile Logo Container */}
+      <div className="absolute top-4 left-4 z-20 md:hidden">
+        <Link to="/" className="hover:text-gray-300">
+          <img src={logo} alt="Logo" className="w-20 md:w-28 lg:w-32" />
+        </Link>
+      </div>
+
       {/* Image Section - Hidden on mobile */}
       <div className="hidden md:block w-2/5 h-full relative">
         {/* Background image */}
@@ -126,6 +133,7 @@ const Login = () => {
             <div className="text-center mt-4 text-sm">
               <span className="text-gray-600">Don't have an account? </span>
               <Link to="/signup" className="hover:text-red-300"> Sign up </Link>
+              <Link to="/signup" className="hover:text-red-300"> Sign up </Link>
             </div>
           </form>
         </div>
@@ -134,4 +142,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;
