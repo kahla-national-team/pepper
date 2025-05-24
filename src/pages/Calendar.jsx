@@ -1,85 +1,102 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaChevronLeft, FaChevronRight, FaPlus, FaHome, FaCheck, FaTimes, FaCarSide, FaUtensils } from 'react-icons/fa';
 import Navbar from '../components/Navbar';
+import { getCalendarData } from '../services/calendarService';
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [view, setView] = useState('calendar'); // 'calendar' or 'properties'
+  const [properties, setProperties] = useState([]);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const properties = [
-    {
-      id: 1,
-      name: 'Luxury Villa',
-      location: 'Miami Beach',
-      status: 'available',
-      price: '$500/night',
-      image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      bookings: [
-        {
-          startDate: new Date(2025, 2, 11),
-          endDate: new Date(2025, 2, 22),
-          type: 'property',
-          status: 'confirmed'
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Beach House',
-      location: 'Malibu',
-      status: 'booked',
-      price: '$350/night',
-      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      bookings: [
-        {
-          startDate: new Date(2024, 2, 10),
-          endDate: new Date(2024, 2, 17),
-          type: 'property',
-          status: 'confirmed'
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: 'Mountain Cabin',
-      location: 'Aspen',
-      status: 'available',
-      price: '$250/night',
-      image: 'https://images.unsplash.com/photo-1523217582562-09d0def993a6?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      bookings: []
-    }
-  ];
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      try {
+        setLoading(true);
+        const data = await getCalendarData();
+        
+        // Transform dates from strings to Date objects
+        const transformedProperties = data.properties.map(property => ({
+          ...property,
+          bookings: property.bookings.map(booking => ({
+            ...booking,
+            startDate: new Date(booking.startDate),
+            endDate: new Date(booking.endDate)
+          }))
+        }));
 
-  const services = [
-    {
-      id: 1,
-      name: 'Luxury Car Service',
-      type: 'car',
-      bookings: [
-        {
-          startDate: new Date(2025, 6, 15),
-          endDate: new Date(2025, 7, 30),
-          type: 'service',
-          status: 'confirmed'
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Private Chef Service',
-      type: 'chef',
-      bookings: [
-        {
-          startDate: new Date(2024, 2, 18),
-          endDate: new Date(2024, 2, 25),
-          type: 'service',
-          status: 'pending'
-        }
-      ]
-    }
-  ];
+        const transformedServices = data.services.map(service => ({
+          ...service,
+          bookings: service.bookings.map(booking => ({
+            ...booking,
+            startDate: new Date(booking.startDate),
+            endDate: new Date(booking.endDate)
+          }))
+        }));
+
+        setProperties(transformedProperties);
+        setServices(transformedServices);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching calendar data:', err);
+        setError('Failed to load calendar data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCalendarData();
+  }, []);
+
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100/50 max-w-2xl">
+        <h3 className="text-2xl font-bold text-gray-800 mb-4">No Properties or Services Found</h3>
+        <p className="text-gray-600 mb-6">
+          You haven't added any properties or services yet. Start by adding your first property or service to manage their availability.
+        </p>
+        <div className="flex space-x-4 justify-center">
+          <button className="bg-gradient-to-r from-[#ff385c] to-[#ff385c]/90 text-white px-6 py-3 rounded-xl hover:from-[#ff385c]/90 hover:to-[#ff385c]/80 transition-all shadow-lg hover:shadow-xl">
+            Add Property
+          </button>
+          <button className="bg-white text-[#ff385c] px-6 py-3 rounded-xl border border-[#ff385c] hover:bg-[#ff385c]/10 transition-all shadow-lg hover:shadow-xl">
+            Add Service
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  if (!properties.length && !services.length) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          {renderEmptyState()}
+        </div>
+      </div>
+    );
+  }
 
   const daysInMonth = new Date(
     currentDate.getFullYear(),
@@ -308,39 +325,45 @@ const Calendar = () => {
                 </div>
               )}
 
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-100/50 p-8">
-                <div className="flex justify-between items-center mb-10">
-                  <button
-                    onClick={handlePrevMonth}
-                    className="p-4 rounded-2xl hover:bg-gray-50/80 transition-all shadow-md hover:shadow-lg hover:scale-105"
-                  >
-                    <FaChevronLeft className="text-[#ff385c] text-2xl" />
-                  </button>
-                  <h2 className="text-4xl font-bold text-gray-800">
-                    {months[currentDate.getMonth()]} {currentDate.getFullYear()}
-                  </h2>
-                  <button
-                    onClick={handleNextMonth}
-                    className="p-4 rounded-2xl hover:bg-gray-50/80 transition-all shadow-md hover:shadow-lg hover:scale-105"
-                  >
-                    <FaChevronRight className="text-[#ff385c] text-2xl" />
-                  </button>
-                </div>
+              {properties.length > 0 ? (
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-100/50 p-8">
+                  <div className="flex justify-between items-center mb-10">
+                    <button
+                      onClick={handlePrevMonth}
+                      className="p-4 rounded-2xl hover:bg-gray-50/80 transition-all shadow-md hover:shadow-lg hover:scale-105"
+                    >
+                      <FaChevronLeft className="text-[#ff385c] text-2xl" />
+                    </button>
+                    <h2 className="text-4xl font-bold text-gray-800">
+                      {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+                    </h2>
+                    <button
+                      onClick={handleNextMonth}
+                      className="p-4 rounded-2xl hover:bg-gray-50/80 transition-all shadow-md hover:shadow-lg hover:scale-105"
+                    >
+                      <FaChevronRight className="text-[#ff385c] text-2xl" />
+                    </button>
+                  </div>
 
-                <div className="grid grid-cols-7 gap-4 mb-6">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                    <div key={day} className="text-center font-semibold text-gray-600 py-4 text-lg">
-                      {day}
-                    </div>
-                  ))}
-                </div>
+                  <div className="grid grid-cols-7 gap-4 mb-6">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center font-semibold text-gray-600 py-4 text-lg">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
 
-                <div className="grid grid-cols-7 gap-4">
-                  {renderCalendarDays()}
+                  <div className="grid grid-cols-7 gap-4">
+                    {renderCalendarDays()}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 text-lg">No properties available to display in calendar view.</p>
+                </div>
+              )}
 
-              {selectedDate && (
+              {selectedDate && getBookingsForDate(selectedDate).length > 0 && (
                 <div className="mt-10 bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-100/50 p-8">
                   <h3 className="text-3xl font-bold text-gray-800 mb-8">
                     Bookings for {selectedDate.toLocaleDateString()}

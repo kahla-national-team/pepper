@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaUsers, FaCar, FaHome, FaMoneyBillWave, FaPlus, FaEdit, FaTrash, FaBell, FaChartLine, FaCalendarAlt, FaStar, FaArrowUp } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import SummaryCard from '../components/Dashboard/SummaryCard';
 import RecentActivity from '../components/Dashboard/RecentActivity';
 import Navbar from '../components/Navbar';
+import { getDashboardStats } from '../services/dashboardService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    properties: { total: 0, active: 0 },
+    revenue: { monthly: 0, ytd: 0 },
+    occupancy: { rate: 0, newBookings: 0 },
+    rating: { average: 0, newReviews: 0 }
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [services, setServices] = useState([
     {
       id: 1,
@@ -37,7 +46,6 @@ const Dashboard = () => {
     }
   ]);
 
-
   const recentActivities = [
     {
       title: 'New Rental Request',
@@ -65,6 +73,23 @@ const Dashboard = () => {
     }
   ];
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await getDashboardStats();
+        setStats(data);
+        setError(null);
+      } catch (err) {
+        setError('Failed to load dashboard statistics');
+        console.error('Error loading dashboard:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   const handleCalendarClick = () => {
     navigate('/calendar');
   };
@@ -72,6 +97,28 @@ const Dashboard = () => {
   const handleReportsClick = () => {
     navigate('/reports');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">Loading dashboard statistics...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center text-red-600">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -88,44 +135,43 @@ const Dashboard = () => {
           <SummaryCard
             icon={FaHome}
             title="Total Properties"
-            value="25"
-            subtitle="20 Active Listings"
+            value={stats.properties.total.toString()}
+            subtitle={`${stats.properties.active} Active Listings`}
             trend={<FaArrowUp className="mr-1" />}
-            trendValue="5%"
+            trendValue={`${Math.round((stats.properties.active / stats.properties.total) * 100)}%`}
             iconBg="bg-[#ff385c]/10"
           />
 
           <SummaryCard
             icon={FaMoneyBillWave}
             title="Monthly Revenue"
-            value="$45,000"
-            subtitle="$320,000 YTD"
+            value={`$${stats.revenue.monthly.toLocaleString()}`}
+            subtitle={`$${stats.revenue.ytd.toLocaleString()} YTD`}
             trend={<FaArrowUp className="mr-1" />}
-            trendValue="8%"
+            trendValue={`${Math.round((stats.revenue.monthly / stats.revenue.ytd) * 100)}%`}
             iconBg="bg-green-50"
           />
 
           <SummaryCard
             icon={FaChartLine}
             title="Occupancy Rate"
-            value="85%"
-            subtitle="12 New Bookings Today"
+            value={`${stats.occupancy.rate}%`}
+            subtitle={`${stats.occupancy.newBookings} New Bookings Today`}
             trend={<FaArrowUp className="mr-1" />}
-            trendValue="2%"
+            trendValue={`${Math.round((stats.occupancy.newBookings / 30) * 100)}%`}
             iconBg="bg-blue-50"
           />
 
           <SummaryCard
             icon={FaStar}
             title="Average Rating"
-            value="4.8"
-            subtitle="28 New Reviews This Month"
+            value={stats.rating.average.toString()}
+            subtitle={`${stats.rating.newReviews} New Reviews This Month`}
             trend={<FaArrowUp className="mr-1" />}
-            trendValue="0.2"
+            trendValue={`${(stats.rating.average - 4.5).toFixed(1)}`}
             iconBg="bg-yellow-50"
           />
         </div>
-
     
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

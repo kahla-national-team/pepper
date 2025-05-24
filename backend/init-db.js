@@ -109,8 +109,21 @@ async function initializeDatabase() {
         is_active boolean DEFAULT true,
         CONSTRAINT rentals_pkey PRIMARY KEY (id)
       );
+
+      -- Add renting_term column if it doesn't exist
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_name = 'rentals' 
+          AND column_name = 'renting_term'
+        ) THEN
+          ALTER TABLE rentals 
+          ADD COLUMN renting_term renting_term_type DEFAULT 'night_term'::renting_term_type;
+        END IF;
+      END $$;
     `);
-    await
     console.log('Rentals table created successfully');
 
     // Create bookings table
