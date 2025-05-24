@@ -85,65 +85,45 @@ const Dashboard = () => {
 
         {/* Quick Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg hover:shadow-xl transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-[#ff385c]/10">
-                <FaHome className="text-[#ff385c] text-xl" />
-              </div>
-              <span className="text-sm font-medium text-green-600 flex items-center">
-                <FaArrowUp className="mr-1" />
-                5%
-              </span>
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">Total Properties</h3>
-            <p className="text-2xl font-bold text-gray-800">25</p>
-            <p className="text-sm text-gray-500 mt-2">20 Active Listings</p>
-          </div>
+          <SummaryCard
+            icon={FaHome}
+            title="Total Properties"
+            value="25"
+            subtitle="20 Active Listings"
+            trend={<FaArrowUp className="mr-1" />}
+            trendValue="5%"
+            iconBg="bg-[#ff385c]/10"
+          />
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg hover:shadow-xl transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-green-50">
-                <FaMoneyBillWave className="text-green-500 text-xl" />
-              </div>
-              <span className="text-sm font-medium text-green-600 flex items-center">
-                <FaArrowUp className="mr-1" />
-                8%
-              </span>
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">Monthly Revenue</h3>
-            <p className="text-2xl font-bold text-gray-800">$45,000</p>
-            <p className="text-sm text-gray-500 mt-2">$320,000 YTD</p>
-          </div>
+          <SummaryCard
+            icon={FaMoneyBillWave}
+            title="Monthly Revenue"
+            value="$45,000"
+            subtitle="$320,000 YTD"
+            trend={<FaArrowUp className="mr-1" />}
+            trendValue="8%"
+            iconBg="bg-green-50"
+          />
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg hover:shadow-xl transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-50">
-                <FaChartLine className="text-blue-500 text-xl" />
-              </div>
-              <span className="text-sm font-medium text-green-600 flex items-center">
-                <FaArrowUp className="mr-1" />
-                2%
-              </span>
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">Occupancy Rate</h3>
-            <p className="text-2xl font-bold text-gray-800">85%</p>
-            <p className="text-sm text-gray-500 mt-2">12 New Bookings Today</p>
-          </div>
+          <SummaryCard
+            icon={FaChartLine}
+            title="Occupancy Rate"
+            value="85%"
+            subtitle="12 New Bookings Today"
+            trend={<FaArrowUp className="mr-1" />}
+            trendValue="2%"
+            iconBg="bg-blue-50"
+          />
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg hover:shadow-xl transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-yellow-50">
-                <FaStar className="text-yellow-500 text-xl" />
-              </div>
-              <span className="text-sm font-medium text-green-600 flex items-center">
-                <FaArrowUp className="mr-1" />
-                0.2
-              </span>
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">Average Rating</h3>
-            <p className="text-2xl font-bold text-gray-800">4.8</p>
-            <p className="text-sm text-gray-500 mt-2">28 New Reviews This Month</p>
-          </div>
+          <SummaryCard
+            icon={FaStar}
+            title="Average Rating"
+            value="4.8"
+            subtitle="28 New Reviews This Month"
+            trend={<FaArrowUp className="mr-1" />}
+            trendValue="0.2"
+            iconBg="bg-yellow-50"
+          />
         </div>
 
     

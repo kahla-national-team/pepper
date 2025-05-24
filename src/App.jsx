@@ -20,6 +20,7 @@ import PropertyForm from './components/PropertyForm';
 import './App.css';
 import { MapVisibilityProvider } from './context/MapVisibilityContext';
 
+
 const AppContent = () => {
   const location = useLocation();
   const showNavbar = location.pathname === '/';

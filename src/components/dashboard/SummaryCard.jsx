@@ -1,22 +1,22 @@
 import React from 'react';
 
-const SummaryCard = ({ title, value, icon, trend, color }) => {
+const SummaryCard = ({ icon: Icon, title, value, subtitle, trend, trendValue, iconBg }) => {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-500 text-sm font-medium">{title}</p>
-          <h3 className="text-2xl font-bold mt-2">{value}</h3>
-          {trend && (
-            <p className={`text-sm mt-2 ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}% from last month
-            </p>
-          )}
+    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg hover:shadow-xl transition-all">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-xl ${iconBg || 'bg-[#ff385c]/10'}`}>
+          {Icon && <Icon className={`text-xl ${iconBg ? 'text-white' : 'text-[#ff385c]'}`} />}
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
-          {icon}
-        </div>
+        {trend && (
+          <span className="text-sm font-medium text-green-600 flex items-center">
+            {trend}
+            {trendValue && <span className="ml-1">{trendValue}</span>}
+          </span>
+        )}
       </div>
+      <h3 className="text-gray-600 text-sm font-medium mb-1">{title}</h3>
+      <p className="text-2xl font-bold text-gray-800">{value}</p>
+      {subtitle && <p className="text-sm text-gray-500 mt-2">{subtitle}</p>}
     </div>
   );
 };

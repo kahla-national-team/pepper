@@ -1,79 +1,54 @@
-const { Pool } = require('pg');
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
-});
+const Rental = require('../models/rentalModel');
 
-// Get all rentals
-exports.getAllRentals = async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM rentals ORDER BY created_at DESC');
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Error fetching rentals:', err);
-        res.status(500).json({ message: 'Error fetching rentals' });
-    }
+exports.getAll = async (req, res, next) => {
+  try {
+    const rentalModel = new Rental(req.app.locals.pool);
+    const rentals = await rentalModel.findAllActive();
+    res.json(rentals);
+  } catch (err) {
+    next(err);
+  }
 };
 
-// Get rental by ID
-exports.getRentalById = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query('SELECT * FROM rentals WHERE id = $1', [id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Rental not found' });
-        }
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error('Error fetching rental:', err);
-        res.status(500).json({ message: 'Error fetching rental' });
-    }
+exports.getById = async (req, res, next) => {
+  try {
+    const rentalModel = new Rental(req.app.locals.pool);
+    const rental = await rentalModel.findById(req.params.id);
+    if (!rental) return res.status(404).json({ message: 'Rental not found' });
+    res.json(rental);
+  } catch (err) {
+    next(err);
+  }
 };
 
-// Create new rental
-exports.createRental = async (req, res) => {
-    const { title, description, price, location } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO rentals (title, description, price, location, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-            [title, description, price, location]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('Error creating rental:', err);
-        res.status(500).json({ message: 'Error creating rental' });
-    }
+exports.create = async (req, res, next) => {
+  try {
+    const rentalModel = new Rental(req.app.locals.pool);
+    const newRental = await rentalModel.create(req.body);
+    res.status(201).json(newRental);
+  } catch (err) {
+    next(err);
+  }
 };
 
-// Update rental
-exports.updateRental = async (req, res) => {
-    const { id } = req.params;
-    const { title, description, price, location } = req.body;
-    try {
-        const result = await pool.query(
-            'UPDATE rentals SET title = $1, description = $2, price = $3, location = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
-            [title, description, price, location, id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Rental not found' });
-        }
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error('Error updating rental:', err);
-        res.status(500).json({ message: 'Error updating rental' });
-    }
+exports.update = async (req, res, next) => {
+  try {
+    const rentalModel = new Rental(req.app.locals.pool);
+    const updated = await rentalModel.update(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ message: 'Rental not found' });
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
 };
 
-// Delete rental
-exports.deleteRental = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query('DELETE FROM rentals WHERE id = $1 RETURNING *', [id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Rental not found' });
-        }
-        res.json({ message: 'Rental deleted successfully' });
-    } catch (err) {
-        console.error('Error deleting rental:', err);
-        res.status(500).json({ message: 'Error deleting rental' });
-    }
+exports.deactivate = async (req, res, next) => {
+  try {
+    const rentalModel = new Rental(req.app.locals.pool);
+    const deactivated = await rentalModel.deactivate(req.params.id);
+    if (!deactivated) return res.status(404).json({ message: 'Rental not found' });
+    res.json({ message: 'Rental deactivated' });
+  } catch (err) {
+    next(err);
+  }
 };

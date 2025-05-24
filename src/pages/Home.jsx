@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 // Remove ServiceSearchBar import from here
 // import ServiceSearchBar from '../components/serviceSearchBar';
-import StaysCard from '../components/StaysCard';
+import StaysCard from '../components/RENTALCard';
 import ServiceCard from '../components/ServiceCard';
 import ServiceMap from '../components/ServiceMap';
 import MapToggleWrapper from '../components/MapToggleWrapper';

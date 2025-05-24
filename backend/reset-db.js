@@ -15,16 +15,16 @@ async function resetDatabase() {
     await pool.query(`
       SELECT pg_terminate_backend(pid)
       FROM pg_stat_activity
-      WHERE datname = 'butler' AND pid <> pg_backend_pid();
+      WHERE datname = 'butlerdb' AND pid <> pg_backend_pid();
     `);
-    console.log('Terminated existing connections to butler database');
+    console.log('Terminated existing connections to butlerdb database');
 
     // Drop the database if it exists
-    await pool.query('DROP DATABASE IF EXISTS butler');
+    await pool.query('DROP DATABASE IF EXISTS butlerdb');
     console.log('Database dropped successfully');
 
     // Create the database
-    await pool.query('CREATE DATABASE butler');
+    await pool.query('CREATE DATABASE butlerdb');
     console.log('Database created successfully');
   } catch (error) {
     console.error('Error resetting database:', error);
