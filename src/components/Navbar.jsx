@@ -67,7 +67,7 @@ const Navbar = () => {
 
           {/* Navigation Links */}
           <div className="hidden md:flex space-x-8">
-            <Link to="/service1" className="text-gray-700 hover:text-[#ff385c] transition-colors">Stays</Link>
+            <Link to="/stays" className="text-gray-700 hover:text-[#ff385c] transition-colors">Stays</Link>
             <Link to="/service2" className="text-gray-700 hover:text-[#ff385c] transition-colors">Services</Link>
             <Link to="/dashboard" className="text-gray-700 hover:text-[#ff385c] transition-colors">Host Service</Link>
           </div>

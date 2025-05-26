@@ -9,6 +9,9 @@ const { Pool } = require('pg');
 const routes = require('./routes');
 const userRoutes = require('./routes/userRoutes');
 const propertyRoutes = require('./routes/propertyRoutes');
+const rentalRoutes = require('./routes/rentalRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
 
@@ -31,7 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 const pool = new Pool({
   user: process.env.PG_USER || 'postgres',
   host: process.env.PG_HOST || 'localhost',
-  database: process.env.PG_DATABASE || 'butler',
+  database: process.env.PG_DATABASE || 'butlerdb',
   password: process.env.PG_PASSWORD || 'dembele',
   port: process.env.PG_PORT || 5432,
 });
@@ -48,6 +51,9 @@ app.locals.pool = pool;
 app.use('/api', routes);
 app.use('/api/users', userRoutes);
 app.use('/api/properties', propertyRoutes);
+app.use('/api/rentals', rentalRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
