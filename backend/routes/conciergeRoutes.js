@@ -1,24 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const conciergeController = require('../controllers/conciergeController');
-const authMiddleware = require('../middleware/authMiddleware'); // Assuming auth middleware exists
+const { authenticateToken } = require('../middleware/auth');
 
-// Apply authentication middleware to all routes
-router.use(authMiddleware);
+// All routes require authentication
+router.use(authenticateToken);
 
 // Create a new concierge service
-router.post('/', conciergeController.createConcierge);
+router.post('/', conciergeController.createService);
 
-// Get all concierge services
-router.get('/', conciergeController.getAllConcierge);
+// Get all services for the authenticated owner
+router.get('/my-services', conciergeController.getOwnerServices);
 
-// Get a single concierge service
-router.get('/:id', conciergeController.getConciergeById);
+// Update a service
+router.put('/:id', conciergeController.updateService);
 
-// Update a concierge service
-router.put('/:id', conciergeController.updateConcierge);
-
-// Delete a concierge service
-router.delete('/:id', conciergeController.deleteConcierge);
+// Delete a service
+router.delete('/:id', conciergeController.deleteService);
 
 module.exports = router;

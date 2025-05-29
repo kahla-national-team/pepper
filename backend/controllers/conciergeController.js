@@ -1,188 +1,134 @@
-const Concierge = require('../models/Concierge');
+const { appPool } = require('../config/database');
 
-// Create a new concierge service
-exports.createConcierge = async (req, res) => {
+const conciergeController = {
+  // Create a new concierge service
+  createService: async (req, res) => {
+    const { name, category, description, price, duration_minutes } = req.body;
+    const owner_id = req.user.id; // Assuming user is authenticated and req.user is set by auth middleware
+
     try {
-        const { name, category, description, price, duration_minutes } = req.body;
-        
-        // Basic validation
-        if (!name || !category || !price) {
-            return res.status(400).json({
-                success: false,
-                message: 'Name, category and price are required'
-            });
-        }
+      const result = await appPool.query(
+        `INSERT INTO concierge_services 
+        (owner_id, name, category, description, price, duration_minutes) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
+        RETURNING *`,
+        [owner_id, name, category, description, price, duration_minutes]
+      );
 
-        // Price validation
-        if (price <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Price must be greater than 0'
-            });
-        }
-
-        // Duration validation if provided
-        if (duration_minutes && duration_minutes <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Duration must be greater than 0 minutes'
-            });
-        }
-
-        const serviceData = {
-            owner_id: req.user.id, // Assuming user info is attached by auth middleware
-            name,
-            category,
-            description,
-            price,
-            duration_minutes
-        };
-
-        const concierge = await Concierge.create(serviceData);
-        res.status(201).json({
-            success: true,
-            data: concierge
-        });
+      res.status(201).json({
+        success: true,
+        data: result.rows[0],
+        message: 'Concierge service created successfully'
+      });
     } catch (error) {
-        console.error('Error creating concierge service:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error creating concierge service'
-        });
+      console.error('Error creating concierge service:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error creating concierge service',
+        error: error.message
+      });
     }
+  },
+
+  // Get all services for a specific owner
+  getOwnerServices: async (req, res) => {
+    const owner_id = req.user.id;
+
+    try {
+      const result = await appPool.query(
+        'SELECT * FROM concierge_services WHERE owner_id = $1 ORDER BY created_at DESC',
+        [owner_id]
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result.rows
+      });
+    } catch (error) {
+      console.error('Error fetching concierge services:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching concierge services',
+        error: error.message
+      });
+    }
+  },
+
+  // Update a service
+  updateService: async (req, res) => {
+    const { id } = req.params;
+    const { name, category, description, price, duration_minutes, is_active } = req.body;
+    const owner_id = req.user.id;
+
+    try {
+      // First check if the service belongs to the owner
+      const checkResult = await appPool.query(
+        'SELECT * FROM concierge_services WHERE id = $1 AND owner_id = $2',
+        [id, owner_id]
+      );
+
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service not found or unauthorized'
+        });
+      }
+
+      const result = await appPool.query(
+        `UPDATE concierge_services 
+        SET name = $1, category = $2, description = $3, price = $4, 
+            duration_minutes = $5, is_active = $6, updated_at = NOW()
+        WHERE id = $7 AND owner_id = $8
+        RETURNING *`,
+        [name, category, description, price, duration_minutes, is_active, id, owner_id]
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result.rows[0],
+        message: 'Service updated successfully'
+      });
+    } catch (error) {
+      console.error('Error updating concierge service:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error updating concierge service',
+        error: error.message
+      });
+    }
+  },
+
+  // Delete a service
+  deleteService: async (req, res) => {
+    const { id } = req.params;
+    const owner_id = req.user.id;
+
+    try {
+      const result = await appPool.query(
+        'DELETE FROM concierge_services WHERE id = $1 AND owner_id = $2 RETURNING *',
+        [id, owner_id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service not found or unauthorized'
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Service deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting concierge service:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting concierge service',
+        error: error.message
+      });
+    }
+  }
 };
 
-// Get all concierge services
-exports.getAllConcierge = async (req, res) => {
-    try {
-        const concierges = await Concierge.getAll();
-        res.status(200).json({
-            success: true,
-            data: concierges
-        });
-    } catch (error) {
-        console.error('Error fetching concierge services:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error fetching concierge services'
-        });
-    }
-};
-
-// Get a single concierge service
-exports.getConciergeById = async (req, res) => {
-    try {
-        const concierge = await Concierge.getById(req.params.id);
-        if (!concierge) {
-            return res.status(404).json({
-                success: false,
-                message: 'Concierge service not found'
-            });
-        }
-        res.status(200).json({
-            success: true,
-            data: concierge
-        });
-    } catch (error) {
-        console.error('Error fetching concierge service:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error fetching concierge service'
-        });
-    }
-};
-
-// Update a concierge service
-exports.updateConcierge = async (req, res) => {
-    try {
-        const serviceId = req.params.id;
-        const service = await Concierge.getById(serviceId);
-
-        if (!service) {
-            return res.status(404).json({
-                success: false,
-                message: 'Concierge service not found'
-            });
-        }
-
-        // Check if user is the owner
-        if (service.owner_id !== req.user.id) {
-            return res.status(403).json({
-                success: false,
-                message: 'Not authorized to update this service'
-            });
-        }
-
-        const { name, category, description, price, duration_minutes, is_active } = req.body;
-
-        // Validation
-        if (price && price <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Price must be greater than 0'
-            });
-        }
-
-        if (duration_minutes && duration_minutes <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Duration must be greater than 0 minutes'
-            });
-        }
-
-        const concierge = await Concierge.update(serviceId, {
-            name,
-            category,
-            description,
-            price,
-            duration_minutes,
-            is_active
-        });
-
-        res.status(200).json({
-            success: true,
-            data: concierge
-        });
-    } catch (error) {
-        console.error('Error updating concierge service:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error updating concierge service'
-        });
-    }
-};
-
-// Delete a concierge service
-exports.deleteConcierge = async (req, res) => {
-    try {
-        const serviceId = req.params.id;
-        const service = await Concierge.getById(serviceId);
-
-        if (!service) {
-            return res.status(404).json({
-                success: false,
-                message: 'Concierge service not found'
-            });
-        }
-
-        // Check if user is the owner
-        if (service.owner_id !== req.user.id) {
-            return res.status(403).json({
-                success: false,
-                message: 'Not authorized to delete this service'
-            });
-        }
-
-        await Concierge.delete(serviceId);
-        res.status(200).json({
-            success: true,
-            message: 'Concierge service deleted successfully'
-        });
-    } catch (error) {
-        console.error('Error deleting concierge service:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error deleting concierge service'
-        });
-    }
-};
+module.exports = conciergeController;

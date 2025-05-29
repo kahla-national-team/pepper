@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaUsers, FaCar, FaHome, FaMoneyBillWave, FaChartLine, FaStar, FaArrowUp } from 'react-icons/fa';
+import { FaUsers, FaCar, FaHome, FaMoneyBillWave, FaChartLine, FaStar, FaArrowUp, FaPlus } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import SummaryCard from '../components/Dashboard/SummaryCard';
@@ -8,6 +8,7 @@ import WelcomeSection from '../components/Dashboard/WelcomeSection';
 import QuickActions from '../components/Dashboard/QuickActions';
 import ConciergeServices from '../components/Dashboard/ConciergeServices';
 import ServiceAnnouncements from '../components/Dashboard/ServiceAnnouncements';
+import ConciergeServiceForm from '../components/ConciergeServiceForm';
 import { getDashboardStats } from '../services/dashboardService';
 
 const Dashboard = () => {
@@ -49,6 +50,8 @@ const Dashboard = () => {
       image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
     }
   ]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formError, setFormError] = useState(null);
 
   const recentActivities = [
     {
@@ -93,6 +96,43 @@ const Dashboard = () => {
 
     fetchStats();
   }, []);
+
+  const handleAddService = async (formData) => {
+    try {
+      const token = localStorage.getItem('token'); // Assuming you store the token in localStorage
+      const response = await fetch('http://localhost:5000/api/concierge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Add the new service to the services state
+        setServices(prevServices => [{
+          id: data.data.id,
+          title: data.data.name,
+          status: 'active',
+          price: `$${data.data.price}/day`,
+          bookings: 0,
+          rating: 0,
+          image: 'https://images.unsplash.com/photo-1555215695-300b0ca6ba4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60' // Default image
+        }, ...prevServices]);
+        
+        setIsModalOpen(false);
+        setFormError(null);
+      } else {
+        setFormError(data.message || 'Failed to create service');
+      }
+    } catch (error) {
+      console.error('Error creating service:', error);
+      setFormError('Failed to create service. Please try again.');
+    }
+  };
 
   if (loading) {
     return (
@@ -176,11 +216,59 @@ const Dashboard = () => {
           <QuickActions />
         </div>
 
-        {/* Concierge Services Section */}
-        <ConciergeServices services={services} />
+        {/* Concierge Services Section with Add Button */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-800">Concierge Services</h2>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition duration-200"
+            >
+              <FaPlus className="text-sm" />
+              Add Service
+            </button>
+          </div>
+          <ConciergeServices services={services} />
+        </div>
 
         {/* Service Announcements */}
         <ServiceAnnouncements />
+
+        {/* Modal for Add Service Form */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-semibold text-gray-800">Add New Service</h2>
+                  <button
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setFormError(null);
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                {formError && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                    {formError}
+                  </div>
+                )}
+
+                <ConciergeServiceForm 
+                  onSubmit={handleAddService}
+                  onCancel={() => {
+                    setIsModalOpen(false);
+                    setFormError(null);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
