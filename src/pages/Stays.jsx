@@ -4,7 +4,7 @@ import { useMapVisibility } from '../context/MapVisibilityContext';
 import { rentalService } from '../services/rentalService';
 import StaysHeader from '../components/Stays/StaysHeader';
 import StaysGrid from '../components/Stays/StaysGrid';
-import MapSection from '../components/Stays/MapSection';
+import RentalMap from '../components/RentalMap';
 
 const Stays = () => {
   const [stays, setStays] = useState([]);
@@ -37,6 +37,10 @@ const Stays = () => {
     setSearchFilters(filters);
   };
 
+  const handleStaySelect = (stay) => {
+    setSelectedStay(stay);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="flex flex-col lg:flex-row">
@@ -50,7 +54,7 @@ const Stays = () => {
             <StaysGrid
               stays={stays}
               selectedStay={selectedStay}
-              onStaySelect={setSelectedStay}
+              onStaySelect={handleStaySelect}
               isLoading={isLoading}
               error={error}
               isMapVisible={isMapVisible}
@@ -58,10 +62,15 @@ const Stays = () => {
           </main>
         </div>
 
-        <MapSection 
-          stays={stays}
-          selectedStay={selectedStay}
-        />
+        {isMapVisible && (
+          <div className="w-full lg:w-1/2 h-[calc(100vh-64px)] sticky top-16">
+            <RentalMap
+              rentals={stays}
+              selectedRental={selectedStay}
+              onRentalSelect={handleStaySelect}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

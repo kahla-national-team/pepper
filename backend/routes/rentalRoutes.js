@@ -13,18 +13,21 @@ router.get('/', async (req, res) => {
         r.id,
         r.title,
         r.description,
-        r.price_per_night,
+        r.price,
         r.address,
         r.latitude,
         r.longitude,
-        r.image_url,
-        u.name as provider_name,
-        u.avatar_url as provider_image,
+        r.image,
+        r.bedrooms,
+        r.bathrooms,
+        r.max_guests,
+        u.username as provider_name,
         COALESCE(AVG(rv.rating), 0) as provider_rating,
         COUNT(rv.id) as review_count
       FROM rentals r
-      LEFT JOIN users u ON r.provider_id = u.id
+      LEFT JOIN users u ON r.owner_id = u.id
       LEFT JOIN reviews rv ON r.id = rv.rental_id
+      WHERE r.is_active = true AND r.is_available = true
     `;
 
     const queryParams = [];
@@ -41,12 +44,12 @@ router.get('/', async (req, res) => {
     }
 
     if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
+      query += ' AND ' + conditions.join(' AND ');
     }
 
     query += `
-      GROUP BY r.id, u.name, u.avatar_url
-      ORDER BY r.id DESC
+      GROUP BY r.id, u.username
+      ORDER BY r.created_at DESC
     `;
 
     const { rows } = await req.app.locals.pool.query(query, queryParams);
@@ -57,20 +60,23 @@ router.get('/', async (req, res) => {
       type: 'stay',
       title: rental.title,
       description: rental.description,
-      price: `$${rental.price_per_night}/night`,
+      price: `$${rental.price}/night`,
       provider: {
         name: rental.provider_name || 'Host',
         rating: parseFloat(rental.provider_rating) || 0,
         reviewCount: parseInt(rental.review_count) || 0,
-        image: rental.provider_image || '/placeholder-avatar.png',
+        image: '/placeholder-avatar.png',
         type: 'property_owner'
       },
-      image: rental.image_url || '/placeholder-stay.jpg',
-      location: { 
+      image: rental.image || '/placeholder-stay.jpg',
+      location: rental.latitude && rental.longitude ? { 
         lat: parseFloat(rental.latitude), 
         lng: parseFloat(rental.longitude) 
-      },
-      address: rental.address
+      } : null,
+      address: rental.address,
+      bedrooms: rental.bedrooms || 0,
+      bathrooms: rental.bathrooms || 0,
+      max_guests: rental.max_guests || 1
     }));
 
     res.json(formattedRentals);
