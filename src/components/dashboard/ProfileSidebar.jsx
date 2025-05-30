@@ -25,9 +25,17 @@ const ProfileSidebar = ({ isOpen, onClose, user }) => {
           {/* User Profile Section */}
           <div className="bg-[#fff1f2] rounded-xl p-4 mb-6 border border-[#ff385c]/10">
             <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 rounded-full bg-[#ff385c] flex items-center justify-center">
-                <FaUser className="text-white text-xl" />
-              </div>
+              {user?.profile_image ? (
+                <img
+                  src={user.profile_image}
+                  alt="Profile"
+                  className="w-14 h-14 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-[#ff385c] flex items-center justify-center">
+                  <FaUser className="text-white text-xl" />
+                </div>
+              )}
               <div>
                 <h3 className="font-semibold text-lg text-[#ff385c]">{user?.name || 'User Name'}</h3>
                 <p className="text-sm text-gray-500">{user?.email || 'user@example.com'}</p>

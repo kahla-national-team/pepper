@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { FaStar, FaBed, FaBath, FaUsers } from 'react-icons/fa';
 
-const RentalMap = ({ rentals, selectedRental, onRentalSelect }) => {
+const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) => {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const infoWindowsRef = useRef([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mapInstanceRef = useRef(null);
 
   useEffect(() => {
     const initMap = async () => {
@@ -21,17 +22,24 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect }) => {
         const { Marker } = await google.maps.importLibrary("marker");
         const { InfoWindow } = await google.maps.importLibrary("maps");
 
-        // Create the map instance
-        const map = new Map(mapRef.current, {
-          center: { lat: 35.6971, lng: -0.6337 }, // Default to Oran, Algeria
-          zoom: 12,
-          mapId: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: true,
-          streetViewControl: true,
-          fullscreenControl: true,
-        });
+        // Create the map instance if it doesn't exist
+        if (!mapInstanceRef.current) {
+          mapInstanceRef.current = new Map(mapRef.current, {
+            center: initialCenter || { lat: 35.6971, lng: -0.6337 }, // Default to Oran, Algeria
+            zoom: 12,
+            mapId: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: true,
+            streetViewControl: true,
+            fullscreenControl: true,
+          });
+        }
+
+        // Update map center if initialCenter changes
+        if (initialCenter) {
+          mapInstanceRef.current.setCenter(initialCenter);
+        }
 
         // Clear existing markers and info windows
         markersRef.current.forEach(marker => marker.setMap(null));
@@ -45,7 +53,7 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect }) => {
             // Create marker
             const marker = new Marker({
               position: rental.location,
-              map,
+              map: mapInstanceRef.current,
               title: rental.title,
               animation: google.maps.Animation.DROP,
             });
@@ -82,7 +90,7 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect }) => {
               // Close all other info windows
               infoWindowsRef.current.forEach(window => window.close());
               // Open this info window
-              infoWindow.open(map, marker);
+              infoWindow.open(mapInstanceRef.current, marker);
               // Notify parent component
               if (onRentalSelect) {
                 onRentalSelect(rental);
@@ -96,13 +104,13 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect }) => {
 
         // Center map on selected rental if any
         if (selectedRental && selectedRental.location) {
-          map.setCenter(selectedRental.location);
-          map.setZoom(15);
+          mapInstanceRef.current.setCenter(selectedRental.location);
+          mapInstanceRef.current.setZoom(15);
           
           // Find and open the info window for the selected rental
           const markerIndex = rentals.findIndex(r => r.id === selectedRental.id);
           if (markerIndex !== -1 && infoWindowsRef.current[markerIndex]) {
-            infoWindowsRef.current[markerIndex].open(map, markersRef.current[markerIndex]);
+            infoWindowsRef.current[markerIndex].open(mapInstanceRef.current, markersRef.current[markerIndex]);
           }
         }
 
@@ -117,7 +125,16 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect }) => {
     if (mapRef.current) {
       initMap();
     }
-  }, [rentals, selectedRental, onRentalSelect]);
+
+    // Cleanup function
+    return () => {
+      markersRef.current.forEach(marker => marker.setMap(null));
+      infoWindowsRef.current.forEach(window => window.close());
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [rentals, selectedRental, onRentalSelect, initialCenter]);
 
   if (error) {
     return (
@@ -185,7 +202,11 @@ RentalMap.propTypes = {
     }),
     address: PropTypes.string,
   }),
-  onRentalSelect: PropTypes.func
+  onRentalSelect: PropTypes.func,
+  initialCenter: PropTypes.shape({
+    lat: PropTypes.number.isRequired,
+    lng: PropTypes.number.isRequired
+  })
 };
 
 export default RentalMap; 

@@ -22,11 +22,13 @@ router.get('/', async (req, res) => {
         r.bathrooms,
         r.max_guests,
         u.username as provider_name,
+        u.profile_image as provider_image,
         COALESCE(AVG(rv.rating), 0) as provider_rating,
-        COUNT(rv.id) as review_count
+        COUNT(DISTINCT rv.id) as review_count
       FROM rentals r
       LEFT JOIN users u ON r.owner_id = u.id
-      LEFT JOIN reviews rv ON r.id = rv.rental_id
+      LEFT JOIN bookings b ON r.id = b.rental_id
+      LEFT JOIN reviews rv ON b.id = rv.booking_id
       WHERE r.is_active = true AND r.is_available = true
     `;
 
@@ -48,7 +50,7 @@ router.get('/', async (req, res) => {
     }
 
     query += `
-      GROUP BY r.id, u.username
+      GROUP BY r.id, u.username, u.profile_image
       ORDER BY r.created_at DESC
     `;
 
@@ -65,7 +67,7 @@ router.get('/', async (req, res) => {
         name: rental.provider_name || 'Host',
         rating: parseFloat(rental.provider_rating) || 0,
         reviewCount: parseInt(rental.review_count) || 0,
-        image: '/placeholder-avatar.png',
+        image: rental.provider_image || '/placeholder-avatar.png',
         type: 'property_owner'
       },
       image: rental.image || '/placeholder-stay.jpg',
@@ -92,15 +94,16 @@ router.get('/:id', async (req, res) => {
     const { rows } = await req.app.locals.pool.query(`
       SELECT 
         r.*,
-        u.name as provider_name,
-        u.avatar_url as provider_image,
+        u.username as provider_name,
+        u.profile_image as provider_image,
         COALESCE(AVG(rv.rating), 0) as provider_rating,
-        COUNT(rv.id) as review_count
+        COUNT(DISTINCT rv.id) as review_count
       FROM rentals r
-      LEFT JOIN users u ON r.provider_id = u.id
-      LEFT JOIN reviews rv ON r.id = rv.rental_id
-      WHERE r.id = $1
-      GROUP BY r.id, u.name, u.avatar_url
+      LEFT JOIN users u ON r.owner_id = u.id
+      LEFT JOIN bookings b ON r.id = b.rental_id
+      LEFT JOIN reviews rv ON b.id = rv.booking_id
+      WHERE r.id = $1 AND r.is_active = true
+      GROUP BY r.id, u.username, u.profile_image
     `, [req.params.id]);
 
     if (rows.length === 0) {
@@ -113,7 +116,7 @@ router.get('/:id', async (req, res) => {
       type: 'stay',
       title: rental.title,
       description: rental.description,
-      price: `$${rental.price_per_night}/night`,
+      price: `$${rental.price}/night`,
       provider: {
         name: rental.provider_name || 'Host',
         rating: parseFloat(rental.provider_rating) || 0,
@@ -121,12 +124,15 @@ router.get('/:id', async (req, res) => {
         image: rental.provider_image || '/placeholder-avatar.png',
         type: 'property_owner'
       },
-      image: rental.image_url || '/placeholder-stay.jpg',
-      location: { 
+      image: rental.image || '/placeholder-stay.jpg',
+      location: rental.latitude && rental.longitude ? { 
         lat: parseFloat(rental.latitude), 
         lng: parseFloat(rental.longitude) 
-      },
-      address: rental.address
+      } : null,
+      address: rental.address,
+      bedrooms: rental.bedrooms || 0,
+      bathrooms: rental.bathrooms || 0,
+      max_guests: rental.max_guests || 1
     };
 
     res.json(formattedRental);

@@ -1,6 +1,40 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 const User = require('../models/User');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure multer storage with Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'pepper/profile_images',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+    transformation: [{ width: 500, height: 500, crop: 'limit' }]
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Accept only image files
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+  }
+}).single('profile_image');
 
 const userController = {
   // Register a new user
@@ -121,9 +155,14 @@ const userController = {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
+      
+      // Return the Cloudinary URL directly
       res.json(user);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching profile', error: error.message });
+      res.status(500).json({ 
+        message: 'Error fetching profile', 
+        error: error.message 
+      });
     }
   },
 
@@ -152,6 +191,79 @@ const userController = {
       res.json({ email: user.email });
     } catch (error) {
       res.status(500).json({ message: 'Error fetching email', error: error.message });
+    }
+  },
+
+  // Update profile image
+  updateProfileImage: async (req, res) => {
+    upload(req, res, async function(err) {
+      if (err) {
+        return res.status(400).json({ 
+          message: 'Error uploading file', 
+          error: err.message 
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ 
+          message: 'No file uploaded' 
+        });
+      }
+
+      try {
+        const userModel = new User(req.app.locals.pool);
+        
+        // Get the Cloudinary URL
+        const imageUrl = req.file.path;
+        
+        // Update user's profile image
+        const updatedUser = await userModel.updateProfileImage(req.user.id, imageUrl);
+        
+        res.json({
+          message: 'Profile image updated successfully',
+          user: {
+            id: updatedUser.id,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            full_name: updatedUser.full_name,
+            profile_image: updatedUser.profile_image
+          }
+        });
+      } catch (error) {
+        console.error('Error updating profile image:', error);
+        res.status(500).json({ 
+          message: 'Error updating profile image', 
+          error: error.message 
+        });
+      }
+    });
+  },
+
+  // Update profile information
+  updateProfile: async (req, res) => {
+    try {
+      const { full_name } = req.body;
+      const userModel = new User(req.app.locals.pool);
+      
+      // Update user's profile information
+      const updatedUser = await userModel.updateProfile(req.user.id, { full_name });
+      
+      res.json({
+        message: 'Profile updated successfully',
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          full_name: updatedUser.full_name,
+          profile_image: updatedUser.profile_image
+        }
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      res.status(500).json({ 
+        message: 'Error updating profile', 
+        error: error.message 
+      });
     }
   }
 };

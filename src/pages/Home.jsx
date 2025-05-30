@@ -1,87 +1,15 @@
 "use client"
 
-import React, { useState } from 'react';
-// Remove ServiceSearchBar import from here
-// import ServiceSearchBar from '../components/serviceSearchBar';
+import React, { useState, useEffect } from 'react';
 import StaysCard from '../components/RENTALCard';
 import ServiceCard from '../components/ServiceCard';
-import ServiceMap from '../components/ServiceMap';
+import RentalMap from '../components/RentalMap';
 import MapToggleWrapper from '../components/MapToggleWrapper';
 import { useMapVisibility } from '../context/MapVisibilityContext';
 import SearchBar from '../components/serviceSearchBar';
-// Sample data for stays
-const stays = [
-  {
-    id: 1,
-    type: 'stay',
-    title: "Luxury Beach Villa",
-    description: "Stunning beachfront villa with private pool and ocean views. Perfect for a romantic getaway or family vacation.",
-    price: "$450/night",
-    provider: {
-      name: "Beach Resorts",
-      rating: 4.9,
-      reviewCount: 128,
-      image: "/host1.jpg",
-      type: 'property_owner'
-    },
-    image: "/stay1.jpg",
-    location: { lat: 35.6971, lng: -0.6337 },
-    address: "123 Beach Road, Malibu, CA"
-  },
-  {
-    id: 2,
-    type: 'stay',
-    title: "Mountain View Cabin",
-    description: "Cozy cabin nestled in the mountains with breathtaking views. Ideal for nature lovers and outdoor enthusiasts.",
-    price: "$250/night",
-    provider: {
-      name: "Mountain Retreats",
-      rating: 4.8,
-      reviewCount: 95,
-      image: "/host2.jpg",
-      type: 'property_owner'
-    },
-    image: "/stay2.jpg",
-    location: { lat: 35.7071, lng: -0.6437 },
-    address: "456 Mountain Trail, Aspen, CO"
-  },
-  {
-    id: 3,
-    type: 'stay',
-    title: "City Center Apartment",
-    description: "Modern apartment in the heart of downtown. Walking distance to restaurants, shops, and attractions.",
-    price: "$200/night",
-    provider: {
-      name: "Urban Stays",
-      rating: 4.7,
-      reviewCount: 156,
-      image: "/host3.jpg",
-      type: 'property_owner'
-    },
-    image: "/stay3.jpg",
-    location: { lat: 35.7171, lng: -0.6537 },
-    address: "789 Main Street, New York, NY"
-  },
-  {
-    id: 4,
-    type: 'stay',
-    title: "Lakeside Cottage",
-    description: "Charming cottage on the lake with private dock. Perfect for fishing, swimming, and water activities.",
-    price: "$300/night",
-    provider: {
-      name: "Lake Properties",
-      rating: 4.9,
-      reviewCount: 82,
-      image: "/host4.jpg",
-      type: 'property_owner'
-    },
-    image: "/stay4.jpg",
-    location: { lat: 35.7271, lng: -0.6637 },
-    address: "321 Lake Road, Lake Tahoe, CA"
-  }
-];
+import { rentalService } from '../services/rentalService';
 
-// Sample data for services
+// Sample data for services only
 const services = [
   {
     id: 1,
@@ -150,6 +78,7 @@ const services = [
 ];
 
 const Home = () => {
+  const [stays, setStays] = useState([]);
   const [selectedStay, setSelectedStay] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [filters, setFilters] = useState({
@@ -161,42 +90,103 @@ const Home = () => {
     favorites: false,
     priceRange: { min: 0, max: 1000 }
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [mapCenter, setMapCenter] = useState({ lat: 35.6971, lng: -0.6337 }); // Default to Oran, Algeria
 
   const { isMapVisible } = useMapVisibility();
 
+  useEffect(() => {
+    const fetchStays = async () => {
+      try {
+        setIsLoading(true);
+        const data = await rentalService.getRentals(filters);
+        
+        // Filter out rentals without coordinates
+        const validRentals = data.filter(rental => rental.location && 
+          typeof rental.location.lat === 'number' && 
+          typeof rental.location.lng === 'number'
+        );
+        
+        setStays(validRentals);
+        
+        // Update map center if we have rentals with coordinates
+        if (validRentals.length > 0) {
+          // Calculate the average center of all rentals
+          const totalLat = validRentals.reduce((sum, rental) => sum + rental.location.lat, 0);
+          const totalLng = validRentals.reduce((sum, rental) => sum + rental.location.lng, 0);
+          setMapCenter({
+            lat: totalLat / validRentals.length,
+            lng: totalLng / validRentals.length
+          });
+        }
+        
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching stays:', err);
+        setError(err.message || 'Failed to load stays. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStays();
+  }, [filters]);
+
   const handleSearch = (value) => {
-    // Implement search logic here
-    console.log('Searching for:', value);
+    setFilters(prev => ({
+      ...prev,
+      destination: value
+    }));
   };
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
   };
 
+  const handleStaySelect = (stay) => {
+    setSelectedStay(stay);
+    if (stay.location) {
+      setMapCenter(stay.location);
+    }
+  };
+
   // Component for rendering a section with cards
-  const Section = ({ title, items, onItemSelect, selectedItem, ItemCard }) => (
+  const Section = ({ title, items, onItemSelect, selectedItem, ItemCard, isLoading, error }) => (
     <section className="mb-8 sm:mb-12">
       <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">{title}</h2>
-      <div className={`grid gap-4 sm:gap-6 ${
-        isMapVisible 
-          ? 'grid-cols-1' 
-          : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-      }`}>
-        {items.map((item) => (
-          <ItemCard 
-            key={item.id}
-            service={item}
-            isSelected={selectedItem?.id === item.id}
-            onClick={() => onItemSelect(item)}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff385c]"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center text-red-500 p-4 bg-red-50 rounded-xl">
+          <p className="font-medium">{error}</p>
+          <p className="text-sm mt-2">Please try again later</p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="text-center p-8 bg-gray-50 rounded-xl">
+          <h3 className="text-xl font-medium text-gray-800 mb-2">No items found</h3>
+          <p className="text-gray-600">Try adjusting your search filters</p>
+        </div>
+      ) : (
+        <div className={`grid gap-4 sm:gap-6 ${
+          isMapVisible 
+            ? 'grid-cols-1 sm:grid-cols-2' 
+            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+        }`}>
+          {items.map((item) => (
+            <ItemCard 
+              key={item.id}
+              service={item}
+              isSelected={selectedItem?.id === item.id}
+              onClick={() => onItemSelect(item)}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
-
-  // Remove filtering logic from here
-  const filteredStays = stays; // Use original data
-  const filteredServices = services; // Use original data
 
   return (
     <div className="min-h-screen bg-white"> 
@@ -208,20 +198,22 @@ const Home = () => {
         />
         {/* Main content - Add padding-top to account for fixed Navbar + search bar */}
         <div className={`w-full transition-all duration-300 ${isMapVisible ? 'lg:w-1/2' : 'lg:w-full'}`}>
-          <main className="container mx-auto px-4 py-4 sm:py-8 pt-[120px]"> {/* Adjusted padding-top based on Navbar height */}
+          <main className="container mx-auto px-4 py-4 sm:py-8 pt-[120px]">
             {/* Stays Section */}
             <Section
               title="Available Stays"
-              items={filteredStays}
-              onItemSelect={setSelectedStay}
+              items={stays}
+              onItemSelect={handleStaySelect}
               selectedItem={selectedStay}
               ItemCard={StaysCard}
+              isLoading={isLoading}
+              error={error}
             />
 
             {/* Services Section */}
             <Section
               title="Available Services"
-              items={filteredServices}
+              items={services}
               onItemSelect={setSelectedService}
               selectedItem={selectedService}
               ItemCard={ServiceCard}
@@ -231,9 +223,11 @@ const Home = () => {
 
         {/* Map Toggle Button and Map */}
         <MapToggleWrapper>
-          <ServiceMap 
-            services={[...stays, ...services]} // Pass all services to the map for now
-            selectedService={selectedStay || selectedService} 
+          <RentalMap 
+            rentals={stays}
+            selectedRental={selectedStay}
+            onRentalSelect={handleStaySelect}
+            initialCenter={mapCenter}
           />
         </MapToggleWrapper>
       </div>

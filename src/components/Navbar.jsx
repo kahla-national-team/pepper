@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo-nav.svg';
 import Button from './Button';
 import ProfileSidebar from './Dashboard/ProfileSidebar';
 import { FaUser } from 'react-icons/fa';
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -15,32 +16,25 @@ const Navbar = () => {
     const token = localStorage.getItem('token');
     if (token) {
       setIsLoggedIn(true);
-      // Fetch user data from your API
       fetchUserData();
     }
   }, []);
 
   const fetchUserData = async () => {
     try {
-      const [nameResponse, emailResponse] = await Promise.all([
-        fetch('http://localhost:5000/api/users/fullname', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }),
-        fetch('http://localhost:5000/api/users/email', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-      ]);
+      const response = await fetch('http://localhost:5000/api/users/profile', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
 
-      if (nameResponse.ok && emailResponse.ok) {
-        const nameData = await nameResponse.json();
-        const emailData = await emailResponse.json();
+      if (response.ok) {
+        const data = await response.json();
+        // Store user data including the Cloudinary profile image URL
         setUser({ 
-          name: nameData.full_name,
-          email: emailData.email 
+          name: data.full_name,
+          email: data.email,
+          profile_image: data.profile_image // This is now a direct Cloudinary URL
         });
       } else {
         console.error('Failed to fetch user data');
@@ -52,6 +46,11 @@ const Navbar = () => {
       setIsLoggedIn(false);
       localStorage.removeItem('token');
     }
+  };
+
+  const handleProfileClick = () => {
+    navigate('/profile');
+    setIsProfileOpen(false);
   };
 
   return (
@@ -75,19 +74,60 @@ const Navbar = () => {
           {/* User Section */}
           <div className="flex items-center space-x-4">
             {isLoggedIn ? (
-              <button
-                onClick={() => setIsProfileOpen(true)}
-                className="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-[#ff385c] flex items-center justify-center">
-                  <FaUser className="text-white" />
-                </div>
-                <span className="font-medium text-gray-700">{user?.name || 'User'}</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center space-x-2 text-gray-700 hover:text-[#ff385c] focus:outline-none"
+                >
+                  {user?.profile_image ? (
+                    <img
+                      src={user.profile_image}
+                      alt="Profile"
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-[#ff385c] flex items-center justify-center">
+                      <FaUser className="text-white" />
+                    </div>
+                  )}
+                  <span className="hidden md:block">{user?.name}</span>
+                </button>
+
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    <div className="py-1" role="menu" aria-orientation="vertical">
+                      <button
+                        onClick={handleProfileClick}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        role="menuitem"
+                      >
+                        Profile
+                      </button>
+                      <button
+                        onClick={() => {
+                          localStorage.removeItem('token');
+                          setIsLoggedIn(false);
+                          setUser(null);
+                          navigate('/');
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        role="menuitem"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
-              <Link to="/login">
-                <Button>Login</Button>
-              </Link>
+              <div className="flex items-center space-x-4">
+                <Link to="/login">
+                  <Button variant="text">Sign in</Button>
+                </Link>
+                <Link to="/signup">
+                  <Button>Sign up</Button>
+                </Link>
+              </div>
             )}
           </div>
         </div>

@@ -17,6 +17,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Calendar from './pages/Calendar';
 import Reports from './pages/reports';
 import PropertyForm from './components/PropertyForm';
+import Profile from './pages/Profile';
 import './App.css';
 import { MapVisibilityProvider } from './context/MapVisibilityContext';
 
@@ -53,6 +54,11 @@ const AppContent = () => {
             <Route path="/add-property" element={
               <ProtectedRoute>
                 <PropertyForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } />
           </Routes>
