@@ -4,11 +4,46 @@ const propertyController = {
   // Create a new property
   createProperty: async (req, res) => {
     try {
-      console.log('Creating property:', req.body);
+      console.log('Request body:', req.body);
+      console.log('Request file:', req.file);
+      
+      // Validate required fields
+      const requiredFields = ['title', 'address', 'city', 'price', 'room_type'];
+      const missingFields = requiredFields.filter(field => !req.body[field]);
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          message: 'Missing required fields',
+          fields: missingFields
+        });
+      }
+
+      // Prepare property data
       const propertyData = {
         ...req.body,
-        owner_id: req.user.id // Get owner_id from authenticated user
+        owner_id: req.user.id, // Get owner_id from authenticated user
+        image: req.file ? req.file.path : null // Get image URL from Cloudinary
       };
+
+      console.log('Creating property with data:', propertyData);
+
+      // Parse amenities if it's a string (from FormData)
+      if (typeof propertyData.amenities === 'string') {
+        try {
+          propertyData.amenities = JSON.parse(propertyData.amenities);
+        } catch (e) {
+          console.error('Error parsing amenities:', e);
+          propertyData.amenities = [];
+        }
+      }
+
+      // Convert numeric fields
+      const numericFields = ['price', 'max_guests', 'bedrooms', 'beds', 'bathrooms', 'latitude', 'longitude'];
+      numericFields.forEach(field => {
+        if (propertyData[field] !== undefined && propertyData[field] !== '') {
+          propertyData[field] = Number(propertyData[field]);
+        }
+      });
 
       const propertyModel = new Property(req.app.locals.pool);
       const property = await propertyModel.create(propertyData);
@@ -20,9 +55,14 @@ const propertyController = {
       });
     } catch (error) {
       console.error('Error creating property:', error);
+      // Log the full error stack for debugging
+      console.error('Error stack:', error.stack);
+      
+      // Send a more detailed error response
       res.status(500).json({
         message: 'Error creating property',
-        error: error.message
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }
   },

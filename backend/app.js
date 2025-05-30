@@ -4,6 +4,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { Pool } = require('pg');
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 
 // Import routes
 const routes = require('./routes');
@@ -15,16 +18,36 @@ const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
 
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dgoz9p4ld',
+  api_key: process.env.CLOUDINARY_API_KEY || '733982826139735',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'QkPtrf1hBJ_oIpTHdGPZ3YNLcTA'
+});
+
+// Configure multer storage
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'pepper-properties',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif']
+  }
+});
+
+const upload = multer({ storage: storage });
+
 // CORS configuration
 const corsOptions = {
   origin: 'http://localhost:5173', // Vite's default port
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'X-Requested-With']
 };
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
@@ -46,6 +69,9 @@ pool.connect()
 
 // Make pool available in app
 app.locals.pool = pool;
+
+// Make upload middleware available in app
+app.locals.upload = upload;
 
 // Routes
 app.use('/api', routes);

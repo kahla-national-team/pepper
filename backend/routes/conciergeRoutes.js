@@ -1,19 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const conciergeController = require('../controllers/conciergeController');
-const { authenticateToken } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+const { upload } = require('../config/cloudinary');
 
 // All routes require authentication
-router.use(authenticateToken);
+router.use(auth);
 
-// Create a new concierge service
-router.post('/', conciergeController.createService);
+// Create a new concierge service with photo upload
+router.post('/', upload.single('photo'), conciergeController.createService);
 
 // Get all services for the authenticated owner
 router.get('/my-services', conciergeController.getOwnerServices);
 
-// Update a service
-router.put('/:id', conciergeController.updateService);
+// Get services by user ID
+router.get('/user/:userId', conciergeController.getServicesByUserId);
+
+// Update a service with optional photo upload
+router.put('/:id', upload.single('photo'), conciergeController.updateService);
 
 // Delete a service
 router.delete('/:id', conciergeController.deleteService);

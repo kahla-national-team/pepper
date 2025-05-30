@@ -37,56 +37,88 @@ class Property {
   }
 
   async create(propertyData) {
-    const {
-      owner_id,
-      title,
-      description,
-      address,
-      city,
-      price,
-      max_guests,
-      bedrooms,
-      beds,
-      bathrooms,
-      room_type,
-      amenities,
-      latitude,
-      longitude,
-      image,
-      renting_term
-    } = propertyData;
+    try {
+      console.log('Property model - Creating property with data:', propertyData);
+      
+      const {
+        owner_id,
+        title,
+        description,
+        address,
+        city,
+        price,
+        max_guests,
+        bedrooms,
+        beds,
+        bathrooms,
+        room_type,
+        amenities,
+        latitude,
+        longitude,
+        image,
+        renting_term
+      } = propertyData;
 
-    const query = `
-      INSERT INTO rentals (
-        owner_id, title, description, address, city, price,
-        max_guests, bedrooms, beds, bathrooms, room_type,
-        amenities, latitude, longitude, image, renting_term
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-      RETURNING *;
-    `;
+      // Validate required fields
+      if (!owner_id || !title || !address || !city || !price || !room_type) {
+        throw new Error('Missing required fields');
+      }
 
-    const values = [
-      owner_id,
-      title,
-      description,
-      address,
-      city,
-      price,
-      max_guests,
-      bedrooms,
-      beds,
-      bathrooms,
-      room_type,
-      amenities,
-      latitude,
-      longitude,
-      image,
-      renting_term
-    ];
+      // Ensure numeric fields are numbers
+      const numericFields = {
+        price: Number(price),
+        max_guests: max_guests ? Number(max_guests) : 1,
+        bedrooms: bedrooms ? Number(bedrooms) : null,
+        beds: beds ? Number(beds) : null,
+        bathrooms: bathrooms ? Number(bathrooms) : null,
+        latitude: latitude ? Number(latitude) : null,
+        longitude: longitude ? Number(longitude) : null
+      };
 
-    const result = await this.pool.query(query, values);
-    return result.rows[0];
+      // Validate numeric fields
+      if (isNaN(numericFields.price) || numericFields.price <= 0) {
+        throw new Error('Invalid price value');
+      }
+
+      const query = `
+        INSERT INTO rentals (
+          owner_id, title, description, address, city, price,
+          max_guests, bedrooms, beds, bathrooms, room_type,
+          amenities, latitude, longitude, image, renting_term
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING *;
+      `;
+
+      const values = [
+        owner_id,
+        title,
+        description || null,
+        address,
+        city,
+        numericFields.price,
+        numericFields.max_guests,
+        numericFields.bedrooms,
+        numericFields.beds,
+        numericFields.bathrooms,
+        room_type,
+        Array.isArray(amenities) ? amenities : [],
+        numericFields.latitude,
+        numericFields.longitude,
+        image || null,
+        renting_term || 'night_term'
+      ];
+
+      console.log('Property model - Executing query with values:', values);
+      const result = await this.pool.query(query, values);
+      console.log('Property model - Query result:', result.rows[0]);
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Property model - Error creating property:', error);
+      console.error('Property model - Error stack:', error.stack);
+      throw error;
+    }
   }
 
   async findById(id) {

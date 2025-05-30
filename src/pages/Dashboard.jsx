@@ -99,14 +99,14 @@ const Dashboard = () => {
 
   const handleAddService = async (formData) => {
     try {
-      const token = localStorage.getItem('token'); // Assuming you store the token in localStorage
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:5000/api/concierge', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
+          // Don't set Content-Type header - browser will set it automatically with boundary for FormData
         },
-        body: JSON.stringify(formData)
+        body: formData // formData is already a FormData object
       });
 
       const data = await response.json();
@@ -120,7 +120,7 @@ const Dashboard = () => {
           price: `$${data.data.price}/day`,
           bookings: 0,
           rating: 0,
-          image: 'https://images.unsplash.com/photo-1555215695-300b0ca6ba4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60' // Default image
+          image: data.data.photo_url || 'https://images.unsplash.com/photo-1555215695-300b0ca6ba4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60' // Use uploaded image or default
         }, ...prevServices]);
         
         setIsModalOpen(false);
@@ -131,6 +131,34 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error creating service:', error);
       setFormError('Failed to create service. Please try again.');
+    }
+  };
+
+  const handleEditService = (service) => {
+    // TODO: Implement edit functionality
+    console.log('Edit service:', service);
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/concierge/${serviceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove the service from the state
+        setServices(prevServices => prevServices.filter(service => service.id !== serviceId));
+      } else {
+        console.error('Failed to delete service:', data.message);
+      }
+    } catch (error) {
+      console.error('Error deleting service:', error);
     }
   };
 
@@ -216,19 +244,14 @@ const Dashboard = () => {
           <QuickActions />
         </div>
 
-        {/* Concierge Services Section with Add Button */}
+        {/* Concierge Services Section */}
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800">Concierge Services</h2>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition duration-200"
-            >
-              <FaPlus className="text-sm" />
-              Add Service
-            </button>
-          </div>
-          <ConciergeServices services={services} />
+          <ConciergeServices 
+            services={services} 
+            onAddService={() => setIsModalOpen(true)}
+            onEditService={handleEditService}
+            onDeleteService={handleDeleteService}
+          />
         </div>
 
         {/* Service Announcements */}

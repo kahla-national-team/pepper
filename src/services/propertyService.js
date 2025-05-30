@@ -3,8 +3,21 @@ import api from './api';
 export const propertyService = {
   createProperty: async (propertyData) => {
     try {
-      const response = await api.post('/properties', propertyData);
-      return response.data;
+      // If propertyData is FormData (contains file), send it directly
+      if (propertyData instanceof FormData) {
+        // Add other form fields to FormData
+        const formData = propertyData;
+        const response = await api.post('/properties', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        return response.data;
+      } else {
+        // Regular JSON data
+        const response = await api.post('/properties', propertyData);
+        return response.data;
+      }
     } catch (error) {
       console.error('Create property error:', error);
       throw error.response?.data || { message: 'An error occurred while creating the property' };

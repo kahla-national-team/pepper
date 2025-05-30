@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import FormInput from './FormInput';
+import { FaUpload, FaTimes } from 'react-icons/fa';
 
 const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,9 @@ const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(initialData.photo_url || null);
+  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,6 +28,47 @@ const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
         ...prev,
         [name]: ''
       }));
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.match('image.*')) {
+        setErrors(prev => ({
+          ...prev,
+          image: 'Please select an image file'
+        }));
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({
+          ...prev,
+          image: 'Image size should be less than 5MB'
+        }));
+        return;
+      }
+
+      setSelectedImage(file);
+      setErrors(prev => ({ ...prev, image: '' }));
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -46,7 +91,21 @@ const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
     e.preventDefault();
     if (validateForm()) {
       try {
-        await onSubmit(formData);
+        // Create FormData object
+        const submitData = new FormData();
+        
+        // Append all form fields
+        Object.keys(formData).forEach(key => {
+          submitData.append(key, formData[key]);
+        });
+
+        // Append image if selected
+        if (selectedImage) {
+          submitData.append('photo', selectedImage);
+        }
+
+        await onSubmit(submitData);
+        
         // Reset form after successful submission
         setFormData({
           name: '',
@@ -55,6 +114,11 @@ const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
           price: '',
           duration_minutes: '',
         });
+        setSelectedImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       } catch (error) {
         console.error('Error submitting form:', error);
       }
@@ -74,6 +138,61 @@ const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
     <form onSubmit={handleSubmit} className="space-y-6">
       <h2 className="text-2xl font-semibold text-gray-800 mb-6 sr-only">Add New Concierge Service</h2>
       
+      {/* Image Upload Section */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Service Image
+        </label>
+        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-[#ff385c] transition-colors">
+          <div className="space-y-1 text-center">
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="mx-auto h-32 w-32 object-cover rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                >
+                  <FaTimes className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <FaUpload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="flex text-sm text-gray-600">
+                  <label
+                    htmlFor="photo"
+                    className="relative cursor-pointer bg-white rounded-md font-medium text-[#ff385c] hover:text-[#ff385c]/80 focus-within:outline-none"
+                  >
+                    <span>Upload a file</span>
+                    <input
+                      id="photo"
+                      name="photo"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={handleImageChange}
+                      ref={fileInputRef}
+                    />
+                  </label>
+                  <p className="pl-1">or drag and drop</p>
+                </div>
+                <p className="text-xs text-gray-500">
+                  PNG, JPG, GIF up to 5MB
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+        {errors.image && (
+          <p className="text-sm text-red-600">{errors.image}</p>
+        )}
+      </div>
+
       <FormInput
         label="Service Name"
         name="name"
@@ -158,7 +277,7 @@ const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
           type="submit"
           className="flex-1 bg-red-600 text-white py-3 px-6 rounded-2xl hover:bg-red-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
         >
-          Add Service
+          {initialData.id ? 'Update Service' : 'Add Service'}
         </button>
       </div>
     </form>

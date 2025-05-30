@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FormInput from './FormInput';
 import Button from './Button';
@@ -37,6 +37,8 @@ const PropertyForm = () => {
   });
 
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   const roomTypes = [
     'Entire place',
@@ -140,6 +142,25 @@ const PropertyForm = () => {
     }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Create a preview URL for the selected image
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('photo', file);
+      
+      // Update formData with the file
+      setFormData(prev => ({
+        ...prev,
+        image: formData
+      }));
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
     
@@ -176,7 +197,27 @@ const PropertyForm = () => {
     if (validateForm()) {
       setIsLoading(true);
       try {
-        const response = await propertyService.createProperty(formData);
+        let dataToSend;
+        
+        if (formData.image instanceof FormData) {
+          // If we have an image, use the FormData and append other fields
+          dataToSend = formData.image;
+          // Append all other form fields to the FormData
+          Object.keys(formData).forEach(key => {
+            if (key !== 'image') {
+              if (key === 'amenities') {
+                dataToSend.append(key, JSON.stringify(formData[key]));
+              } else {
+                dataToSend.append(key, formData[key]);
+              }
+            }
+          });
+        } else {
+          // If no image, send regular JSON data
+          dataToSend = { ...formData };
+        }
+        
+        const response = await propertyService.createProperty(dataToSend);
         console.log('Property created successfully:', response);
         navigate('/dashboard');
       } catch (error) {
@@ -437,13 +478,69 @@ const PropertyForm = () => {
             {/* Image Upload */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-xl font-semibold mb-4">Property Image</h3>
-              <FormInput
-                type="text"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                placeholder="Image URL"
-              />
+              <div className="space-y-4">
+                <div className="flex items-center justify-center w-full">
+                  <label
+                    htmlFor="image-upload"
+                    className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                  >
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Property preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg
+                          className="w-8 h-8 mb-4 text-gray-500"
+                          aria-hidden="true"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 20 16"
+                        >
+                          <path
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                          />
+                        </svg>
+                        <p className="mb-2 text-sm text-gray-500">
+                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500">PNG, JPG or JPEG (MAX. 10MB)</p>
+                      </div>
+                    )}
+                    <input
+                      id="image-upload"
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                </div>
+                {imagePreview && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setFormData(prev => ({ ...prev, image: '' }));
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                      className="text-sm text-red-600 hover:text-red-800"
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end space-x-4">
