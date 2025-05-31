@@ -29,18 +29,19 @@ const StaysGrid = ({ stays, selectedStay, onStaySelect, isLoading, error, isMapV
   }
 
   return (
-    <div className={`grid gap-6 mb-8 ${
+    <div className={`grid gap-4 sm:gap-6 ${
       isMapVisible 
-        ? 'grid-cols-1 sm:grid-cols-2' 
-        : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+        : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
     }`}>
       {stays.map((stay) => (
-        <StaysCard 
-          key={stay.id}
-          service={stay}
-          isSelected={selectedStay?.id === stay.id}
-          onClick={() => onStaySelect(stay)}
-        />
+        <div key={stay.id} className="h-full">
+          <StaysCard 
+            service={stay}
+            isSelected={selectedStay?.id === stay.id}
+            onClick={() => onStaySelect(stay)}
+          />
+        </div>
       ))}
     </div>
   );

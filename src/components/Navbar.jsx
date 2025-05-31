@@ -93,31 +93,7 @@ const Navbar = () => {
                   <span className="hidden md:block">{user?.name}</span>
                 </button>
 
-                {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                    <div className="py-1" role="menu" aria-orientation="vertical">
-                      <button
-                        onClick={handleProfileClick}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        role="menuitem"
-                      >
-                        Profile
-                      </button>
-                      <button
-                        onClick={() => {
-                          localStorage.removeItem('token');
-                          setIsLoggedIn(false);
-                          setUser(null);
-                          navigate('/');
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        role="menuitem"
-                      >
-                        Sign out
-                      </button>
-                    </div>
-                  </div>
-                )}
+              
               </div>
             ) : (
               <div className="flex items-center space-x-4">

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { LoadScript } from '@react-google-maps/api';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -21,6 +22,7 @@ import Profile from './pages/Profile';
 import './App.css';
 import { MapVisibilityProvider } from './context/MapVisibilityContext';
 
+const libraries = ['places', 'marker', 'maps'];
 
 const AppContent = () => {
   const location = useLocation();
@@ -71,9 +73,14 @@ const AppContent = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <LoadScript
+      googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+      libraries={libraries}
+    >
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </LoadScript>
   );
 }
 

@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { FaStar, FaBed, FaBath, FaUsers } from 'react-icons/fa';
 
@@ -7,59 +7,48 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const infoWindowsRef = useRef([]);
+  const clustererRef = useRef(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const mapInstanceRef = useRef(null);
 
-  useEffect(() => {
-    const initMap = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+  // Debounce function to limit marker updates
+  const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
 
-        // Load the Google Maps JavaScript API
-        const { Map } = await google.maps.importLibrary("maps");
-        const { Marker } = await google.maps.importLibrary("marker");
-        const { InfoWindow } = await google.maps.importLibrary("maps");
+  // Create markers only for visible rentals
+  const createMarkers = useCallback(async (map, rentals, clusterer) => {
+    const { Marker } = await google.maps.importLibrary("marker");
+    const { InfoWindow } = await google.maps.importLibrary("maps");
 
-        // Create the map instance if it doesn't exist
-        if (!mapInstanceRef.current) {
-          mapInstanceRef.current = new Map(mapRef.current, {
-            center: initialCenter || { lat: 35.6971, lng: -0.6337 }, // Default to Oran, Algeria
-            zoom: 12,
-            mapId: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-            disableDefaultUI: false,
-            zoomControl: true,
-            mapTypeControl: true,
-            streetViewControl: true,
-            fullscreenControl: true,
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+    infoWindowsRef.current.forEach(window => window.close());
+    infoWindowsRef.current = [];
+
+    // Create markers in batches
+    const batchSize = 50;
+    for (let i = 0; i < rentals.length; i += batchSize) {
+      const batch = rentals.slice(i, i + batchSize);
+      await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI updates
+
+      batch.forEach(rental => {
+        if (rental.location) {
+          const marker = new Marker({
+            position: rental.location,
+            map: null, // Don't add to map directly
+            title: rental.title,
+            animation: google.maps.Animation.DROP,
           });
-        }
 
-        // Update map center if initialCenter changes
-        if (initialCenter) {
-          mapInstanceRef.current.setCenter(initialCenter);
-        }
-
-        // Clear existing markers and info windows
-        markersRef.current.forEach(marker => marker.setMap(null));
-        markersRef.current = [];
-        infoWindowsRef.current.forEach(window => window.close());
-        infoWindowsRef.current = [];
-
-        // Add markers for each rental
-        rentals.forEach(rental => {
-          if (rental.location) {
-            // Create marker
-            const marker = new Marker({
-              position: rental.location,
-              map: mapInstanceRef.current,
-              title: rental.title,
-              animation: google.maps.Animation.DROP,
-            });
-
-            // Create info window content
-            const content = `
+          const infoWindow = new InfoWindow({
+            content: `
               <div class="p-4 max-w-xs">
                 <img src="${rental.image}" alt="${rental.title}" class="w-full h-32 object-cover rounded-lg mb-2"/>
                 <h3 class="font-bold text-lg mb-1">${rental.title}</h3>
@@ -77,40 +66,112 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
                   <span><i class="fas fa-users mr-1"></i>${rental.max_guests || 1} guests</span>
                 </div>
               </div>
-            `;
+            `,
+            maxWidth: 300,
+          });
 
-            // Create info window
-            const infoWindow = new InfoWindow({
-              content,
-              maxWidth: 300,
-            });
+          marker.addListener('click', () => {
+            infoWindowsRef.current.forEach(window => window.close());
+            infoWindow.open(map, marker);
+            if (onRentalSelect) {
+              onRentalSelect(rental);
+            }
+          });
 
-            // Add click listener to marker
-            marker.addListener('click', () => {
-              // Close all other info windows
-              infoWindowsRef.current.forEach(window => window.close());
-              // Open this info window
-              infoWindow.open(mapInstanceRef.current, marker);
-              // Notify parent component
-              if (onRentalSelect) {
-                onRentalSelect(rental);
+          markersRef.current.push(marker);
+          infoWindowsRef.current.push(infoWindow);
+          clusterer.addMarker(marker);
+        }
+      });
+    }
+  }, [onRentalSelect]);
+
+  useEffect(() => {
+    const initMap = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Load required libraries
+        const { Map } = await google.maps.importLibrary("maps");
+        const { MarkerClusterer } = await google.maps.importLibrary("markerclusterer");
+
+        // Create map instance if it doesn't exist
+        if (!mapInstanceRef.current) {
+          mapInstanceRef.current = new Map(mapRef.current, {
+            center: initialCenter || { lat: 35.6971, lng: -0.6337 },
+            zoom: 12,
+            mapId: "pepper_map",
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: true,
+            streetViewControl: true,
+            fullscreenControl: true,
+            styles: [
+              {
+                featureType: "poi",
+                elementType: "labels",
+                stylers: [{ visibility: "off" }]
               }
-            });
+            ]
+          });
 
-            markersRef.current.push(marker);
-            infoWindowsRef.current.push(infoWindow);
-          }
-        });
+          // Create marker clusterer
+          clustererRef.current = new MarkerClusterer({
+            map: mapInstanceRef.current,
+            markers: [],
+            renderer: {
+              render: ({ count, position }) => {
+                return new google.maps.Marker({
+                  position,
+                  label: { text: String(count), color: "white" },
+                  icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: "#ff385c",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2,
+                    scale: 20,
+                  },
+                });
+              },
+            },
+          });
 
-        // Center map on selected rental if any
-        if (selectedRental && selectedRental.location) {
+          // Update markers when map bounds change
+          const updateVisibleMarkers = debounce(() => {
+            const bounds = mapInstanceRef.current.getBounds();
+            if (bounds) {
+              // Remove setVisibleMarkers call since we don't need it
+              // const visible = rentals.filter(rental => 
+              //   rental.location && bounds.contains(rental.location)
+              // );
+              // setVisibleMarkers(visible);
+            }
+          }, 250);
+
+          mapInstanceRef.current.addListener("idle", updateVisibleMarkers);
+        }
+
+        // Update map center if needed
+        if (initialCenter) {
+          mapInstanceRef.current.setCenter(initialCenter);
+        }
+
+        // Create markers
+        await createMarkers(mapInstanceRef.current, rentals, clustererRef.current);
+
+        // Center on selected rental
+        if (selectedRental?.location) {
           mapInstanceRef.current.setCenter(selectedRental.location);
           mapInstanceRef.current.setZoom(15);
           
-          // Find and open the info window for the selected rental
           const markerIndex = rentals.findIndex(r => r.id === selectedRental.id);
           if (markerIndex !== -1 && infoWindowsRef.current[markerIndex]) {
-            infoWindowsRef.current[markerIndex].open(mapInstanceRef.current, markersRef.current[markerIndex]);
+            infoWindowsRef.current[markerIndex].open(
+              mapInstanceRef.current, 
+              markersRef.current[markerIndex]
+            );
           }
         }
 
@@ -126,15 +187,17 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
       initMap();
     }
 
-    // Cleanup function
     return () => {
       markersRef.current.forEach(marker => marker.setMap(null));
       infoWindowsRef.current.forEach(window => window.close());
+      if (clustererRef.current) {
+        clustererRef.current.clearMarkers();
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current = null;
       }
     };
-  }, [rentals, selectedRental, onRentalSelect, initialCenter]);
+  }, [rentals, selectedRental, initialCenter, createMarkers]);
 
   if (error) {
     return (
@@ -163,8 +226,12 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
   return (
     <div 
       ref={mapRef} 
-      className="w-full h-full bg-gray-100"
-      style={{ minHeight: '400px' }}
+      className="w-full h-full bg-gray-100 rounded-lg shadow-lg"
+      style={{ 
+        minHeight: 'calc(100vh - 4rem)',
+        position: 'sticky',
+        top: '4rem'
+      }}
     />
   );
 };
