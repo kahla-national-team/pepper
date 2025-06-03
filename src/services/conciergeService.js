@@ -62,5 +62,26 @@ export const conciergeService = {
       console.error('Delete service error:', error);
       throw error.response?.data || { message: 'An error occurred while deleting the service' };
     }
+  },
+
+  // Get all concierge services
+  getAllServices: async () => {
+    try {
+      const response = await api.get('/concierge/all');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      throw error;
+    }
+  },
+
+  getServiceDetails: async (id) => {
+    try {
+      const response = await api.get(`/concierge/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching service details:', error);
+      throw error;
+    }
   }
 }; 

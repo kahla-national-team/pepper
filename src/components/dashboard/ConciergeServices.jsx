@@ -4,91 +4,101 @@ import { conciergeService } from '../../services/conciergeService';
 import { authService } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
-const ServiceCard = ({ service, onEdit, onDelete }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden group">
-    <div className="relative h-48 overflow-hidden">
-      <img 
-        src={service.photo_url || service.image} 
-        alt={service.name}
-        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
-        onError={(e) => {
-          e.target.onerror = null; // Prevent infinite loop
-          e.target.src = 'https://images.unsplash.com/photo-1555215695-300b0ca6ba4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
-        }}
-      />
-      <div className="absolute top-4 right-4">
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-          service.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-        }`}>
-          {service.is_active ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-    </div>
-    <div className="p-6">
-      <h3 className="font-bold text-xl text-gray-800 mb-2">{service.name}</h3>
-      <div className="flex items-center space-x-4 mb-4">
-        <span className="text-[#ff385c] font-bold text-lg">${service.price}</span>
-        <div className="flex items-center text-yellow-400">
-          <FaStar />
-          <span className="ml-1 text-gray-600">{service.rating}</span>
+const ServiceCard = ({ service, onEdit, onDelete }) => {
+  console.log('Service data in ServiceCard:', service);
+  console.log('Photo URL:', service.photo_url);
+  console.log('Image:', service.image);
+  
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden group">
+      <div className="relative h-48 overflow-hidden">
+        <img 
+          src={service.photo_url || service.image} 
+          alt={service.name}
+          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
+          onError={(e) => {
+            console.log('Image failed to load:', e.target.src);
+            e.target.onerror = null; // Prevent infinite loop
+            e.target.src = 'https://images.unsplash.com/photo-1555215695-300b0ca6ba4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
+          }}
+        />
+        <div className="absolute top-4 right-4">
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+            service.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            {service.is_active ? 'Active' : 'Inactive'}
+          </span>
         </div>
       </div>
-      <div className="flex items-center text-gray-500 mb-6">
-        <FaCalendarAlt className="mr-2" />
-        <span>{service.bookings} bookings</span>
-      </div>
-      <div className="flex space-x-3">
-        <button 
-          onClick={() => onEdit(service)}
-          className="flex-1 flex items-center justify-center space-x-2 bg-[#ff385c] text-white py-3 rounded-xl hover:bg-[#ff385c]/90 transition-all"
-        >
-          <FaEdit />
-          <span>Edit</span>
-        </button>
-        <button 
-          onClick={() => onDelete(service.id)}
-          className="flex-1 flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-3 rounded-xl hover:bg-gray-200 transition-all"
-        >
-          <FaTrash />
-          <span>Delete</span>
-        </button>
+      <div className="p-6">
+        <h3 className="font-bold text-xl text-gray-800 mb-2">{service.name}</h3>
+        <div className="flex items-center space-x-4 mb-4">
+          <span className="text-[#ff385c] font-bold text-lg">${service.price}</span>
+          <div className="flex items-center text-yellow-400">
+            <FaStar />
+            <span className="ml-1 text-gray-600">{service.rating}</span>
+          </div>
+        </div>
+        <div className="flex items-center text-gray-500 mb-6">
+          <FaCalendarAlt className="mr-2" />
+          <span>{service.bookings} bookings</span>
+        </div>
+        <div className="flex space-x-3">
+          <button 
+            onClick={() => onEdit(service)}
+            className="flex-1 flex items-center justify-center space-x-2 bg-[#ff385c] text-white py-3 rounded-xl hover:bg-[#ff385c]/90 transition-all"
+          >
+            <FaEdit />
+            <span>Edit</span>
+          </button>
+          <button 
+            onClick={() => onDelete(service.id)}
+            className="flex-1 flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-3 rounded-xl hover:bg-gray-200 transition-all"
+          >
+            <FaTrash />
+            <span>Delete</span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ConciergeServices = ({ userId: propUserId, onAddService, onEditService, onDeleteService }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-
-  // Use propUserId if provided, otherwise use the authenticated user's ID
-  const userId = propUserId || authService.getCurrentUser()?.id;
+  const { user } = authService;
 
   useEffect(() => {
     const fetchServices = async () => {
-      if (!userId) {
-        setError('User ID is required to fetch services');
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
-        setError(null);
+        const userId = propUserId || user?.id;
+        console.log('Fetching services for user:', userId);
+        
         const response = await conciergeService.getServicesByUserId(userId);
-        setServices(response.data);
+        console.log('Services API response:', response);
+        
+        if (response.success) {
+          console.log('Setting services data:', response.data);
+          setServices(response.data);
+        } else {
+          setError(response.message || 'Failed to fetch services');
+        }
       } catch (err) {
         console.error('Error fetching services:', err);
-        setError(err.message || 'Failed to fetch services');
+        setError(err.message || 'An error occurred while fetching services');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchServices();
-  }, [userId]);
+    if (user?.id || propUserId) {
+      fetchServices();
+    }
+  }, [user?.id, propUserId]);
 
   if (loading) {
     return (

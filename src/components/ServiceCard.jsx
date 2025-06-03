@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { FaStar, FaClock } from 'react-icons/fa';
 
 const ServiceCard = ({ service, isSelected, onClick }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +14,13 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
   const {
     id,
     type,
-    image = '/placeholder-service.jpg'
+    title,
+    description,
+    price,
+    category,
+    duration,
+    image = '/placeholder-service.jpg',
+    provider
   } = service;
 
   // Handle click to navigate and potentially select
@@ -21,8 +28,8 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
     if (onClick) {
       onClick();
     }
-    if (id && type) {
-      navigate(`/details/${type}/${id}`);
+    if (id) {
+      navigate(`/details/concierge/${id}`);
     }
   };
 
@@ -39,7 +46,7 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
       <div className="relative h-48">
         <img
           src={image}
-          alt="Service"
+          alt={title}
           className="w-full h-full object-cover"
           onLoad={() => setIsLoading(false)}
           onError={() => {
@@ -57,6 +64,44 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
             <span className="text-gray-500">Image not available</span>
           </div>
         )}
+        {category && (
+          <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-sm">
+            {category}
+          </div>
+        )}
+      </div>
+      
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
+        <p className="text-gray-600 text-sm mb-2 line-clamp-2">{description}</p>
+        
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[#ff385c] font-bold">{price}</span>
+          {duration && (
+            <div className="flex items-center text-gray-500 text-sm">
+              <FaClock className="mr-1" />
+              <span>{duration} min</span>
+            </div>
+          )}
+        </div>
+
+        {provider && (
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className="flex items-center">
+              <img
+                src={provider.image}
+                alt={provider.name}
+                className="w-6 h-6 rounded-full mr-2"
+              />
+              <span className="text-sm text-gray-600">{provider.name}</span>
+            </div>
+            <div className="flex items-center">
+              <FaStar className="text-yellow-400 mr-1" />
+              <span className="text-sm text-gray-600">{provider.rating.toFixed(1)}</span>
+              <span className="text-sm text-gray-400 ml-1">({provider.reviewCount})</span>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -66,7 +111,18 @@ ServiceCard.propTypes = {
   service: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     type: PropTypes.string.isRequired,
-    image: PropTypes.string
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    price: PropTypes.string,
+    category: PropTypes.string,
+    duration: PropTypes.number,
+    image: PropTypes.string,
+    provider: PropTypes.shape({
+      name: PropTypes.string,
+      rating: PropTypes.number,
+      reviewCount: PropTypes.number,
+      image: PropTypes.string
+    })
   }).isRequired,
   isSelected: PropTypes.bool,
   onClick: PropTypes.func

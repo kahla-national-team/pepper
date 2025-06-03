@@ -35,7 +35,7 @@ const RecentActivity = ({ activities }) => {
         <span className="text-sm text-gray-500">{activities.length} activities</span>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4">;
         {activities.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No recent activities to display

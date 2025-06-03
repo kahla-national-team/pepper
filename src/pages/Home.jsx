@@ -8,6 +8,7 @@ import MapToggleWrapper from '../components/MapToggleWrapper';
 import { useMapVisibility } from '../context/MapVisibilityContext';
 import SearchBar from '../components/serviceSearchBar';
 import { rentalService } from '../services/rentalService';
+import { conciergeService } from '../services/conciergeService';
 
 // Sample data for services only
 const services = [
@@ -79,6 +80,7 @@ const services = [
 
 const Home = () => {
   const [stays, setStays] = useState([]);
+  const [conciergeServices, setConciergeServices] = useState([]);
   const [selectedStay, setSelectedStay] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [filters, setFilters] = useState({
@@ -91,7 +93,9 @@ const Home = () => {
     priceRange: { min: 0, max: 1000 }
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isServicesLoading, setIsServicesLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [servicesError, setServicesError] = useState(null);
   const [mapCenter, setMapCenter] = useState({ lat: 35.6971, lng: -0.6337 }); // Default to Oran, Algeria
 
   const { isMapVisible } = useMapVisibility();
@@ -132,6 +136,29 @@ const Home = () => {
 
     fetchStays();
   }, [filters]);
+
+  // Add new useEffect for fetching concierge services
+  useEffect(() => {
+    const fetchConciergeServices = async () => {
+      try {
+        setIsServicesLoading(true);
+        const response = await conciergeService.getAllServices();
+        if (response.success) {
+          setConciergeServices(response.data);
+        } else {
+          throw new Error(response.message || 'Failed to fetch services');
+        }
+        setServicesError(null);
+      } catch (err) {
+        console.error('Error fetching concierge services:', err);
+        setServicesError(err.message || 'Failed to load services. Please try again later.');
+      } finally {
+        setIsServicesLoading(false);
+      }
+    };
+
+    fetchConciergeServices();
+  }, []);
 
   const handleSearch = (value) => {
     setFilters(prev => ({
@@ -210,13 +237,15 @@ const Home = () => {
               error={error}
             />
 
-            {/* Services Section */}
+            {/* Concierge Services Section */}
             <Section
               title="Available Services"
-              items={services}
+              items={conciergeServices}
               onItemSelect={setSelectedService}
               selectedItem={selectedService}
               ItemCard={ServiceCard}
+              isLoading={isServicesLoading}
+              error={servicesError}
             />
           </main>
         </div>

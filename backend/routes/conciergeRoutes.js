@@ -16,6 +16,12 @@ router.get('/my-services', conciergeController.getOwnerServices);
 // Get services by user ID
 router.get('/user/:userId', conciergeController.getServicesByUserId);
 
+// Get all active concierge services
+router.get('/all', conciergeController.getAllServices);
+
+// Get service details by ID
+router.get('/:id', conciergeController.getServiceById);
+
 // Update a service with optional photo upload
 router.put('/:id', upload.single('photo'), conciergeController.updateService);
 

@@ -224,39 +224,188 @@ const conciergeController = {
   // Get services by user ID
   getServicesByUserId: async (req, res) => {
     const { userId } = req.params;
+    console.log('Getting services for user:', userId);
 
     try {
       const result = await appPool.query(
         `SELECT 
           cs.*,
           u.username as provider_name,
+          u.profile_image as provider_image,
           COUNT(DISTINCT sr.id) as bookings
         FROM concierge_services cs
         LEFT JOIN users u ON cs.owner_id = u.id
         LEFT JOIN service_requests sr ON cs.id = sr.service_id
         WHERE cs.owner_id = $1
-        GROUP BY cs.id, u.username
+        GROUP BY cs.id, u.username, u.profile_image
         ORDER BY cs.created_at DESC`,
         [userId]
       );
 
+      console.log('Raw database result:', result.rows);
+
+      const mappedData = result.rows.map(service => ({
+        ...service,
+        rating: 0, // Default rating since we don't have ratings yet
+        bookings: parseInt(service.bookings) || 0,
+        provider: {
+          name: service.provider_name || 'Service Provider',
+          image: service.provider_image || '/placeholder-avatar.png' // Use user's profile image or fallback
+        }
+      }));
+
+      console.log('Mapped service data:', mappedData);
+
       res.status(200).json({
         success: true,
-        data: result.rows.map(service => ({
-          ...service,
-          rating: 0, // Default rating since we don't have ratings yet
-          bookings: parseInt(service.bookings) || 0,
-          provider: {
-            name: service.provider_name || 'Service Provider',
-            image: '/placeholder-avatar.png' // Using a default placeholder image
-          }
-        }))
+        data: mappedData
       });
     } catch (error) {
       console.error('Error fetching user services:', error);
       res.status(500).json({
         success: false,
         message: 'Error fetching user services',
+        error: error.message
+      });
+    }
+  },
+
+  // Get all active concierge services
+  getAllServices: async (req, res) => {
+    try {
+      const result = await appPool.query(
+        `SELECT 
+          cs.*,
+          u.username as provider_name,
+          u.profile_image as provider_image,
+          COUNT(DISTINCT sr.id) as bookings
+        FROM concierge_services cs
+        LEFT JOIN users u ON cs.owner_id = u.id
+        LEFT JOIN service_requests sr ON cs.id = sr.service_id
+        WHERE cs.is_active = true
+        GROUP BY cs.id, u.username, u.profile_image
+        ORDER BY cs.created_at DESC`
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result.rows.map(service => ({
+          id: service.id,
+          type: 'concierge',
+          title: service.name,
+          description: service.description,
+          price: `$${service.price}/hour`,
+          category: service.category,
+          duration: service.duration_minutes,
+          image: service.photo_url || '/placeholder-service.jpg',
+          provider: {
+            name: service.provider_name || 'Service Provider',
+            rating: 0, // Default rating since we don't have ratings yet
+            reviewCount: parseInt(service.bookings) || 0,
+            image: service.provider_image || '/placeholder-avatar.png' // Use user's profile image or fallback
+          }
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching all concierge services:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching concierge services',
+        error: error.message
+      });
+    }
+  },
+
+  // Get service by ID with detailed information
+  getServiceById: async (req, res) => {
+    const { id } = req.params;
+    console.log('Getting detailed service info for ID:', id);
+
+    try {
+      const result = await appPool.query(
+        `SELECT 
+          cs.*,
+          u.username as provider_name,
+          u.profile_image as provider_image,
+          u.email as provider_email,
+          COUNT(DISTINCT sr.id) as bookings,
+          json_agg(DISTINCT jsonb_build_object(
+            'id', sr.id,
+            'date', sr.requested_date,
+            'status', sr.status
+          )) FILTER (WHERE sr.id IS NOT NULL) as bookings_list
+        FROM concierge_services cs
+        LEFT JOIN users u ON cs.owner_id = u.id
+        LEFT JOIN service_requests sr ON cs.id = sr.service_id
+        WHERE cs.id = $1 AND cs.is_active = true
+        GROUP BY cs.id, u.username, u.profile_image, u.email`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service not found'
+        });
+      }
+
+      const service = result.rows[0];
+      
+      // Process bookings to get availability
+      const bookings = service.bookings_list || [];
+      const bookedDates = bookings
+        .filter(booking => booking.status === 'confirmed')
+        .map(booking => booking.date);
+
+      // Format the response
+      const formattedService = {
+        id: service.id,
+        type: 'concierge',
+        title: service.name,
+        description: service.description,
+        price: `$${service.price}/hour`,
+        category: service.category,
+        duration: service.duration_minutes,
+        image: service.photo_url || '/placeholder-service.jpg',
+        location: {
+          address: service.address || 'Available in your location',
+          coordinates: service.coordinates || null
+        },
+        availability: {
+          bookedDates: bookedDates,
+          maxBookingsPerDay: 3 // You can make this configurable
+        },
+        provider: {
+          name: service.provider_name || 'Service Provider',
+          rating: 0, // Default rating since we don't have ratings yet
+          reviewCount: parseInt(service.bookings) || 0,
+          image: service.provider_image || '/placeholder-avatar.png',
+          email: service.provider_email
+        },
+        features: [
+          'Professional service',
+          'Flexible scheduling',
+          'Quality guaranteed',
+          service.category === 'Cleaning' ? 'Eco-friendly products' : null,
+          service.category === 'Transportation' ? 'Licensed driver' : null,
+          service.category === 'Security' ? 'Background checked' : null
+        ].filter(Boolean), // Remove null values
+        details: service.description || 'Professional service with attention to detail.',
+        createdAt: service.created_at,
+        updatedAt: service.updated_at
+      };
+
+      console.log('Formatted service data:', formattedService);
+
+      res.status(200).json({
+        success: true,
+        data: formattedService
+      });
+    } catch (error) {
+      console.error('Error fetching service details:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching service details',
         error: error.message
       });
     }
