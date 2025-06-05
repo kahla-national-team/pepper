@@ -205,7 +205,16 @@ async function initializeDatabase() {
         updated_at timestamp with time zone DEFAULT now()
       );
     `);
-
+    await appPool.query(`
+      CREATE TABLE IF NOT EXISTS favorites (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        item_id INTEGER NOT NULL,
+        item_type VARCHAR(10) CHECK (item_type IN ('stay', 'service')) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE (user_id, item_id, item_type)
+      );
+    `);
     console.log('All tables created successfully');
   } catch (error) {
     console.error('Error creating tables:', error);

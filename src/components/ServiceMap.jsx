@@ -24,7 +24,7 @@ const ServiceMap = ({ services, selectedService }) => {
         const map = new Map(mapRef.current, {
           center: { lat: 35.6971, lng: -0.6337 }, // Default to Oran, Algeria
           zoom: 12,
-          mapId: "AIzaSyB1sD5MQKu-bQhgQWmTOzwjVCvPRMdpyMI", // Replace with your map ID
+          mapId: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
           disableDefaultUI: true,
           zoomControl: true,
         });

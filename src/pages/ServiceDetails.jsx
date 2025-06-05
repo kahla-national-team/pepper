@@ -1,29 +1,55 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { conciergeService } from '../services/conciergeService';
-import { FaStar, FaClock, FaMapMarkerAlt, FaEnvelope } from 'react-icons/fa';
+
 
 function ServiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [service, setService] = useState(null);
 
+  console.log('ServiceDetails rendering with id:', id);
+
   useEffect(() => {
+    console.log('useEffect running in ServiceDetails');
+    // Simulate API call
     const fetchService = async () => {
       try {
-        setLoading(true);
-        const response = await conciergeService.getServiceDetails(id);
-        if (response.success) {
-          setService(response.data);
-        } else {
-          throw new Error(response.message || 'Failed to fetch service details');
-        }
+        // In a real app, you would fetch the service details using the ID
+        const mockService = {
+          id: id,
+          title: "Luxury Villa Cleaning",
+          description: "Professional deep cleaning service for luxury villas with attention to detail.",
+          price: "From $120",
+          provider: {
+            name: "Elite Cleaners",
+            rating: 4.9,
+            reviewCount: 156,
+            image: "/placeholder-avatar.png"
+          },
+          location: { lat: 35.6971, lng: -0.6337 },
+          address: "123 Beach Road, Oran",
+          availability: ["Mon", "Wed", "Fri"],
+          maxGuests: 10,
+          images: [
+            "/placeholder-service-1.jpg",
+            "/placeholder-service-2.jpg",
+            "/placeholder-service-3.jpg"
+          ],
+          details: "Our luxury villa cleaning service includes deep cleaning of all rooms, kitchen sanitation, bathroom disinfection, and window cleaning. We use eco-friendly products that are safe for your family and pets.",
+          features: [
+            "Deep cleaning of all surfaces",
+            "Eco-friendly cleaning products",
+            "Professional equipment",
+            "Flexible scheduling",
+            "Satisfaction guaranteed"
+          ]
+        };
+
+        setService(mockService);
       } catch (error) {
         console.error('Error fetching service:', error);
-        setError(error.message || 'Failed to load service details');
       } finally {
         setLoading(false);
       }
@@ -35,15 +61,15 @@ function ServiceDetails() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="text-lg text-gray-600">Loading service details...</div>
       </div>
     );
   }
 
-  if (error || !service) {
+  if (!service) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <div className="text-lg text-red-600 mb-4">{error || 'Service not found'}</div>
+        <div className="text-lg text-gray-600 mb-4">Service not found</div>
         <button
           onClick={() => navigate(-1)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -76,60 +102,25 @@ function ServiceDetails() {
             <div className="md:flex-shrink-0 md:w-1/2">
               <img
                 className="h-48 w-full object-cover md:h-full"
-                src={service.image}
-                alt={service.title}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/placeholder-service.jpg';
-                }}
-              />
+                src={service.images[0]}
+                alt={service.title} />
             </div>
             <div className="p-8">
-              <div className="flex items-center mb-4">
-                <img
-                  src={service.provider.image}
-                  alt={service.provider.name}
-                  className="w-10 h-10 rounded-full mr-3"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/placeholder-avatar.png';
-                  }}
-                />
-                <div>
-                  <div className="text-sm text-gray-600">{service.provider.name}</div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <FaStar className="text-yellow-400 mr-1" />
-                    <span>{service.provider.rating.toFixed(1)}</span>
-                    <span className="mx-1">•</span>
-                    <span>{service.provider.reviewCount} reviews</span>
-                  </div>
-                </div>
+              <div className="uppercase tracking-wide text-sm text-indigo-600 font-semibold">
+                {service.provider.name}
               </div>
-
-              <h1 className="text-3xl font-extrabold text-gray-900 mb-4">
+              <h1 className="mt-2 text-3xl font-extrabold text-gray-900">
                 {service.title}
               </h1>
-
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="flex items-center text-gray-600">
-                  <FaClock className="mr-2" />
-                  <span>{service.duration} minutes</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <FaMapMarkerAlt className="mr-2" />
-                  <span>{service.location.address}</span>
-                </div>
-              </div>
-
-              <p className="text-gray-600 mb-6">
+              <p className="mt-3 text-gray-600">
                 {service.details}
               </p>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Features</h3>
-                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="mt-6">
+                <h3 className="text-lg font-medium text-gray-900">Features</h3>
+                <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {service.features.map((feature, index) => (
-                    <li key={index} className="flex items-center text-gray-600">
+                    <li key={index} className="flex items-center">
                       <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
@@ -139,30 +130,15 @@ function ServiceDetails() {
                 </ul>
               </div>
 
-              <div className="border-t border-gray-200 pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">{service.price}</p>
-                    <p className="text-sm text-gray-500">per service</p>
-                  </div>
-                  <button 
-                    className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    onClick={() => {
-                      // TODO: Implement booking functionality
-                      alert('Booking functionality coming soon!');
-                    }}
-                  >
-                    Book Now
-                  </button>
+              <div className="mt-8 flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{service.price}</p>
+                  <p className="text-sm text-gray-500">per service</p>
                 </div>
+                <button className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                  Book Now
+                </button>
               </div>
-
-              {service.provider.email && (
-                <div className="mt-6 flex items-center text-gray-600">
-                  <FaEnvelope className="mr-2" />
-                  <span>Contact provider: {service.provider.email}</span>
-                </div>
-              )}
             </div>
           </div>
         </motion.div>

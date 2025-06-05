@@ -1,13 +1,16 @@
 "use client";
 import PropTypes from 'prop-types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FaStar, FaClock } from 'react-icons/fa';
+import { FaStar, FaClock, FaHeart, FaRegHeart } from 'react-icons/fa';
+import favoriteService from '../services/favoriteService';
 
 const ServiceCard = ({ service, isSelected, onClick }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(true);
   const navigate = useNavigate();
 
   // Default values for service
@@ -23,13 +26,54 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
     provider
   } = service;
 
-  // Handle click to navigate and potentially select
-  const handleClick = () => {
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (id) {
+        try {
+          const status = await favoriteService.isFavorite(id, 'service');
+          setIsFavorite(status);
+        } catch (error) {
+          console.error('Error checking favorite status:', error);
+        } finally {
+          setIsFavoriteLoading(false);
+        }
+      }
+    };
+    checkFavoriteStatus();
+  }, [id]);
+
+  const handleClick = (e) => {
+    // Prevent navigation when clicking the favorite button
+    if (e.target.closest('.favorite-button')) {
+      return;
+    }
+    
     if (onClick) {
       onClick();
     }
     if (id) {
       navigate(`/details/concierge/${id}`);
+    }
+  };
+
+  const handleFavoriteClick = async (e) => {
+    e.stopPropagation();
+    if (!id || isFavoriteLoading) return;
+
+    try {
+      setIsFavoriteLoading(true);
+      if (isFavorite) {
+        await favoriteService.removeFavorite(id, 'service');
+        setIsFavorite(false);
+      } else {
+        await favoriteService.addFavorite(id, 'service');
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setIsFavoriteLoading(false);
     }
   };
 
@@ -69,6 +113,20 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
             {category}
           </div>
         )}
+        <button
+          className="favorite-button absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm"
+          onClick={handleFavoriteClick}
+          disabled={isFavoriteLoading}
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          {isFavoriteLoading ? (
+            <div className="w-5 h-5 animate-spin rounded-full border-b-2 border-[#ff385c]"></div>
+          ) : isFavorite ? (
+            <FaHeart className="w-5 h-5 text-[#ff385c]" />
+          ) : (
+            <FaRegHeart className="w-5 h-5 text-gray-600 hover:text-[#ff385c] transition-colors" />
+          )}
+        </button>
       </div>
       
       <div className="p-4">

@@ -142,6 +142,40 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Get reviews for a rental
+router.get('/:id/reviews', async (req, res) => {
+  try {
+    const { rows } = await req.app.locals.pool.query(`
+      SELECT 
+        r.id,
+        r.rating,
+        r.comment,
+        r.created_at,
+        u.username as user_name,
+        u.profile_image as user_image
+      FROM reviews r
+      JOIN bookings b ON r.booking_id = b.id
+      LEFT JOIN users u ON r.user_id = u.id
+      WHERE b.rental_id = $1
+      ORDER BY r.created_at DESC
+    `, [req.params.id]);
+
+    const formattedReviews = rows.map(review => ({
+      id: review.id,
+      rating: review.rating,
+      comment: review.comment,
+      created_at: review.created_at,
+      user_name: review.user_name || 'Anonymous',
+      user_image: review.user_image || '/placeholder-avatar.png'
+    }));
+
+    res.json(formattedReviews);
+  } catch (error) {
+    console.error('Error fetching rental reviews:', error);
+    res.status(500).json({ message: 'Error fetching rental reviews' });
+  }
+});
+
 // Use the exported functions directly
 router.post('/', rentalController.create);
 router.put('/:id', rentalController.update);

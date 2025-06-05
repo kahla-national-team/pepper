@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaStar, FaClock, FaMapMarkerAlt, FaEnvelope } from 'react-icons/fa';
+import { FaStar, FaClock, FaMapMarkerAlt, FaEnvelope, FaCheck, FaCalendarAlt } from 'react-icons/fa';
 import { conciergeService } from '../services/conciergeService';
 import Navbar from '../components/Navbar';
 
@@ -39,10 +39,22 @@ const DetailsPage = () => {
     fetchItemDetails();
   }, [type, id]);
 
+  // Helper function to format availability
+  const formatAvailability = (availability) => {
+    if (!availability) return null;
+    if (Array.isArray(availability)) {
+      return availability.join(', ');
+    }
+    if (typeof availability === 'string') {
+      return availability;
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff385c]"></div>
       </div>
     );
   }
@@ -50,10 +62,10 @@ const DetailsPage = () => {
   if (error || !item) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <div className="text-lg text-red-600 mb-4">{error || 'Service not found'}</div>
+        <div className="text-lg text-red-500 mb-4">{error || 'Service not found'}</div>
         <button
           onClick={() => navigate(-1)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="px-6 py-3 bg-[#ff385c] text-white font-medium rounded-lg hover:bg-[#e31c5f] transition-colors"
         >
           Go Back
         </button>
@@ -61,16 +73,19 @@ const DetailsPage = () => {
     );
   }
 
+  const formattedAvailability = formatAvailability(item.availability);
+
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back Button */}
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center text-blue-600 hover:text-blue-800 mb-6"
+            className="flex items-center text-[#ff385c] hover:text-[#e31c5f] mb-8 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
             Back to Services
@@ -79,12 +94,14 @@ const DetailsPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-md overflow-hidden"
+            className="bg-white rounded-2xl shadow-lg overflow-hidden"
           >
+            {/* Main Content */}
             <div className="md:flex">
-              <div className="md:flex-shrink-0 md:w-1/2">
+              {/* Image Section */}
+              <div className="md:w-1/2 relative">
                 <img
-                  className="h-48 w-full object-cover md:h-full"
+                  className="w-full h-64 md:h-full object-cover"
                   src={item.image}
                   alt={item.title}
                   onError={(e) => {
@@ -92,91 +109,107 @@ const DetailsPage = () => {
                     e.target.src = '/placeholder-service.jpg';
                   }}
                 />
-              </div>
-              <div className="p-8">
-                <div className="flex items-center mb-4">
+                {item.category && (
+                  <div className="absolute top-4 right-4 bg-[#ff385c] text-white px-3 py-1 rounded-full text-sm font-medium">
+                    {item.category}
+    </div>
+                )}
+      </div>
+
+              {/* Details Section */}
+              <div className="md:w-1/2 p-6 md:p-8">
+                {/* Provider Info */}
+                <div className="flex items-center mb-6">
                   <img
                     src={item.provider.image}
                     alt={item.provider.name}
-                    className="w-10 h-10 rounded-full mr-3"
+                    className="w-12 h-12 rounded-full border-2 border-[#ff385c] mr-4"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = '/placeholder-avatar.png';
                     }}
                   />
                   <div>
-                    <div className="text-sm text-gray-600">{item.provider.name}</div>
-                    <div className="flex items-center text-sm text-gray-500">
+                    <div className="text-sm font-medium text-gray-900">{item.provider.name}</div>
+                    <div className="flex items-center text-sm text-gray-600">
                       <FaStar className="text-yellow-400 mr-1" />
                       <span>{item.provider.rating.toFixed(1)}</span>
                       <span className="mx-1">•</span>
                       <span>{item.provider.reviewCount} reviews</span>
                     </div>
-                  </div>
-                </div>
+        </div>
+      </div>
 
-                <h1 className="text-3xl font-extrabold text-gray-900 mb-4">
+                {/* Title and Description */}
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">
                   {item.title}
                 </h1>
-
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="flex items-center text-gray-600">
-                    <FaClock className="mr-2" />
-                    <span>{item.duration} minutes</span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <FaMapMarkerAlt className="mr-2" />
-                    <span>{item.location.address}</span>
-                  </div>
-                </div>
-
                 <p className="text-gray-600 mb-6">
                   {item.details}
                 </p>
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Features</h3>
-                  <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {/* Service Info */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="flex items-center text-gray-600">
+                    <FaClock className="text-[#ff385c] mr-2" />
+                    <span>{item.duration} minutes</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <FaMapMarkerAlt className="text-[#ff385c] mr-2" />
+                    <span>{item.location.address}</span>
+                  </div>
+                  {formattedAvailability && (
+                    <div className="flex items-center text-gray-600">
+                      <FaCalendarAlt className="text-[#ff385c] mr-2" />
+                      <span>{formattedAvailability}</span>
+                    </div>
+                  )}
+          </div>
+
+                {/* Features */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Features</h3>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {item.features.map((feature, index) => (
                       <li key={index} className="flex items-center text-gray-600">
-                        <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {feature}
+                        <FaCheck className="text-[#ff385c] mr-2 flex-shrink-0" />
+                        <span>{feature}</span>
                       </li>
-                    ))}
-                  </ul>
-                </div>
+              ))}
+            </ul>
+          </div>
 
+                {/* Price and Booking */}
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">{item.price}</p>
+            <div>
+                      <p className="text-2xl font-bold text-[#ff385c]">{item.price}</p>
                       <p className="text-sm text-gray-500">per service</p>
-                    </div>
-                    <button 
-                      className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              </div>
+              <button
+                      className="px-8 py-3 bg-[#ff385c] text-white font-medium rounded-lg hover:bg-[#e31c5f] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff385c]"
                       onClick={() => {
                         // TODO: Implement booking functionality
                         alert('Booking functionality coming soon!');
                       }}
                     >
                       Book Now
-                    </button>
-                  </div>
-                </div>
+              </button>
+        </div>
+      </div>
 
+                {/* Contact Info */}
                 {item.provider.email && (
-                  <div className="mt-6 flex items-center text-gray-600">
-                    <FaEnvelope className="mr-2" />
+                  <div className="mt-6 flex items-center text-gray-600 bg-gray-50 p-4 rounded-lg">
+                    <FaEnvelope className="text-[#ff385c] mr-2" />
                     <span>Contact provider: {item.provider.email}</span>
-                  </div>
+              </div>
                 )}
               </div>
             </div>
           </motion.div>
-        </div>
       </div>
+    </div>
     </>
   );
 };

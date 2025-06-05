@@ -49,5 +49,15 @@ export const rentalService = {
       console.error('Get rentals error:', error);
       throw error.response?.data || { message: 'An error occurred while fetching rentals' };
     }
+  },
+
+  getRentalReviews: async (rentalId) => {
+    try {
+      const response = await api.get(`/rentals/${rentalId}/reviews`);
+      return response.data;
+    } catch (error) {
+      console.error('Get rental reviews error:', error);
+      throw error.response?.data || { message: 'An error occurred while fetching rental reviews' };
+    }
   }
 }; 

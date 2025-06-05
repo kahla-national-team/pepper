@@ -1,14 +1,21 @@
 "use client"
 import PropTypes from 'prop-types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { FaStar, FaBed, FaBath, FaUsers, FaHeart, FaRegHeart } from 'react-icons/fa';
+import favoriteService from '../services/favoriteService';
 
-const StaysCard = ({ service, isSelected, onClick }) => {
+const StaysCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initialIsFavorite = true, isHomePage = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
+  const navigate = useNavigate();
 
   // Default values for service
   const {
+    id,
     title = 'Stay Title',
     description = 'Stay description',
     price = '$0/night',
@@ -18,18 +25,59 @@ const StaysCard = ({ service, isSelected, onClick }) => {
       reviewCount: 0,
       image: '/placeholder-avatar.png'
     },
-    image = '/placeholder-stay.jpg'
+    image = '/placeholder-stay.jpg',
+    bedrooms = 0,
+    bathrooms = 0,
+    max_guests = 1
   } = service;
+
+  const handleClick = (e) => {
+    // Prevent navigation when clicking the favorite button
+    if (e.target.closest('.favorite-button')) {
+      return;
+    }
+    
+    if (onClick) {
+      onClick();
+    }
+    if (id) {
+      navigate(`/details/stay/${id}`);
+    }
+  };
+
+  const handleFavoriteClick = async (e) => {
+    e.stopPropagation();
+    if (!id || isFavoriteLoading) return;
+
+    try {
+      setIsFavoriteLoading(true);
+      if (isHomePage) {
+        if (isFavorite) {
+          await favoriteService.removeFavorite(id);
+          setIsFavorite(false);
+        } else {
+          await favoriteService.addFavorite(id, 'rental');
+          setIsFavorite(true);
+        }
+      } else if (onUnlike) {
+        await onUnlike(id);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  };
 
   return (
     <motion.div 
       className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer h-full ${
-        isSelected ? 'ring-2 ring-blue-500' : ''
+        isSelected ? 'ring-2 ring-[#ff385c]' : ''
       }`}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      onClick={onClick}
+      onClick={handleClick}
     >
       <div className="relative h-48">
         <img
@@ -44,7 +92,7 @@ const StaysCard = ({ service, isSelected, onClick }) => {
         />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff385c]"></div>
           </div>
         )}
         {hasError && (
@@ -52,17 +100,47 @@ const StaysCard = ({ service, isSelected, onClick }) => {
             <span className="text-gray-500">Image not available</span>
           </div>
         )}
+        <button
+          className="favorite-button absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm"
+          onClick={handleFavoriteClick}
+          disabled={isFavoriteLoading}
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          {isFavoriteLoading ? (
+            <div className="w-5 h-5 animate-spin rounded-full border-b-2 border-[#ff385c]"></div>
+          ) : isFavorite ? (
+            <FaHeart className="w-5 h-5 text-[#ff385c]" />
+          ) : (
+            <FaRegHeart className="w-5 h-5 text-gray-600 hover:text-[#ff385c] transition-colors" />
+          )}
+        </button>
       </div>
 
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-          <span className="text-blue-600 font-semibold">{price}</span>
+          <span className="text-[#ff385c] font-semibold">{price}</span>
         </div>
         
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">{description}</p>
         
-        <div className="flex items-center">
+        {/* Property Details */}
+        <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
+          <div className="flex items-center">
+            <FaBed className="mr-1" />
+            <span>{bedrooms} beds</span>
+          </div>
+          <div className="flex items-center">
+            <FaBath className="mr-1" />
+            <span>{bathrooms} baths</span>
+          </div>
+          <div className="flex items-center">
+            <FaUsers className="mr-1" />
+            <span>{max_guests} guests</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center pt-2 border-t border-gray-100">
           <img
             src={provider.image}
             alt={provider.name}
@@ -71,9 +149,9 @@ const StaysCard = ({ service, isSelected, onClick }) => {
           <div>
             <p className="text-sm font-medium text-gray-800">{provider.name}</p>
             <div className="flex items-center">
-              <span className="text-yellow-400">★</span>
-              <span className="text-sm text-gray-600 ml-1">
-                {provider.rating} ({provider.reviewCount} reviews)
+              <FaStar className="text-yellow-400 mr-1" />
+              <span className="text-sm text-gray-600">
+                {provider.rating.toFixed(1)} ({provider.reviewCount} reviews)
               </span>
             </div>
           </div>
@@ -96,10 +174,16 @@ StaysCard.propTypes = {
       image: PropTypes.string
     }),
     image: PropTypes.string,
-    address: PropTypes.string
+    address: PropTypes.string,
+    bedrooms: PropTypes.number,
+    bathrooms: PropTypes.number,
+    max_guests: PropTypes.number
   }).isRequired,
   isSelected: PropTypes.bool,
-  onClick: PropTypes.func
+  onClick: PropTypes.func,
+  onUnlike: PropTypes.func,
+  isFavorite: PropTypes.bool,
+  isHomePage: PropTypes.bool
 };
 
 export default StaysCard; 

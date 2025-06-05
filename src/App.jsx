@@ -19,6 +19,8 @@ import Calendar from './pages/Calendar';
 import Reports from './pages/reports';
 import PropertyForm from './components/PropertyForm';
 import Profile from './pages/Profile';
+import StaysDetails from './pages/StaysDetails';
+import FavoritesPage from './pages/FavoritesPage';
 import './App.css';
 import { MapVisibilityProvider } from './context/MapVisibilityContext';
 
@@ -51,6 +53,7 @@ const AppContent = () => {
             <Route path="/services" element={<Services />} />
             <Route path="/services/:id" element={<ServiceDetails />} />
             <Route path="/details/:type/:id" element={<DetailsPage />} />
+            <Route path="/details/stay/:id" element={<StaysDetails />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/add-property" element={
@@ -63,6 +66,7 @@ const AppContent = () => {
                 <Profile />
               </ProtectedRoute>
             } />
+            <Route path="/favorites" element={<FavoritesPage />} />
           </Routes>
         </div>
         {!hideFooter && <Footer />}

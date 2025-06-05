@@ -15,6 +15,7 @@ const propertyRoutes = require('./routes/propertyRoutes');
 const rentalRoutes = require('./routes/rentalRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/favorites', favoriteRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
