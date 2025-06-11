@@ -21,57 +21,77 @@ import PropertyForm from './components/PropertyForm';
 import Profile from './pages/Profile';
 import StaysDetails from './pages/StaysDetails';
 import FavoritesPage from './pages/FavoritesPage';
+import UserProfile from './pages/UserProfile';
+import BookingSuccess from './pages/BookingSuccess';
+import BookingPage from './pages/BookingPage';
 import './App.css';
 import { MapVisibilityProvider } from './context/MapVisibilityContext';
+import { AuthProvider } from './context/AuthContext';
+import { SearchModeProvider } from './context/SearchModeContext';
 
 const libraries = ['places', 'marker', 'maps'];
 
 const AppContent = () => {
   const location = useLocation();
-  const showNavbar = location.pathname === '/';
+  const hideNavbar = location.pathname === '/login' || location.pathname === '/signup';
   const hideFooter = location.pathname === '/login' || location.pathname === '/signup';
 
   return (
-    <MapVisibilityProvider>
-      <div className="w-full min-h-screen m-0 bg-white flex flex-col">
-        {showNavbar && <Navbar />}
-        <div className="flex-1">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="/dashboard-service" element={<DashboardService />} />
-            <Route path="/stays" element={<Stays />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/services/:id" element={<ServiceDetails />} />
-            <Route path="/details/:type/:id" element={<DetailsPage />} />
-            <Route path="/details/stay/:id" element={<StaysDetails />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/add-property" element={
-              <ProtectedRoute>
-                <PropertyForm />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } />
-            <Route path="/favorites" element={<FavoritesPage />} />
-          </Routes>
-        </div>
-        {!hideFooter && <Footer />}
-      </div>
-    </MapVisibilityProvider>
+    <AuthProvider>
+      <SearchModeProvider>
+        <MapVisibilityProvider>
+          <div className="w-full min-h-screen m-0 bg-white flex flex-col">
+            {!hideNavbar && <Navbar />}
+            <div className="flex-1">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="/dashboard-service" element={<DashboardService />} />
+                <Route path="/stays" element={<Stays />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/services/:id" element={<ServiceDetails />} />
+                <Route path="/details/:type/:id" element={<DetailsPage />} />
+                <Route path="/details/stay/:id" element={<StaysDetails />} />
+                <Route path="/calendar" element={<Calendar />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/add-property" element={
+                  <ProtectedRoute>
+                    <PropertyForm />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/favorites" element={<FavoritesPage />} />
+                <Route path="/users/:id" element={<UserProfile />} />
+                <Route path="/booking/:id" element={
+                  <ProtectedRoute>
+                    <BookingPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/booking-success/:id" element={
+                  <ProtectedRoute>
+                    <BookingSuccess />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </div>
+            {!hideFooter && <Footer />}
+          </div>
+        </MapVisibilityProvider>
+      </SearchModeProvider>
+    </AuthProvider>
   );
 };
 

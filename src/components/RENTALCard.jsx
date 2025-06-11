@@ -10,7 +10,7 @@ const StaysCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initial
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
+  const [isFavorite, setIsFavorite] = useState(isHomePage ? false : initialIsFavorite);
   const navigate = useNavigate();
 
   // Default values for service
@@ -30,6 +30,23 @@ const StaysCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initial
     bathrooms = 0,
     max_guests = 1
   } = service;
+
+  // Add useEffect to check favorite status when component mounts
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (id && !isHomePage) {
+        try {
+          const status = await favoriteService.isFavorite(id, 'stay');
+          setIsFavorite(status);
+        } catch (error) {
+          console.error('Error checking favorite status:', error);
+          // Don't change the favorite status if there's an error
+          // This prevents the UI from flickering when the server is down
+        }
+      }
+    };
+    checkFavoriteStatus();
+  }, [id, isHomePage]);
 
   const handleClick = (e) => {
     // Prevent navigation when clicking the favorite button
@@ -56,14 +73,27 @@ const StaysCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initial
           await favoriteService.removeFavorite(id);
           setIsFavorite(false);
         } else {
-          await favoriteService.addFavorite(id, 'rental');
-          setIsFavorite(true);
+          try {
+            await favoriteService.addFavorite(id, 'stay');
+            setIsFavorite(true);
+          } catch (error) {
+            if (error.message === 'Please sign in to add favorites') {
+              // Redirect to login page
+              navigate('/login');
+              return;
+            } else if (error.message === 'Server is not running or not accessible') {
+              alert('Unable to add to favorites. Please try again later.');
+              return;
+            }
+            throw error;
+          }
         }
       } else if (onUnlike) {
         await onUnlike(id);
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
+      alert('Unable to update favorite status. Please try again later.');
     } finally {
       setIsFavoriteLoading(false);
     }

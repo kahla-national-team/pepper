@@ -81,9 +81,7 @@ const favoriteModel = {
           WHEN f.item_type = 'service' THEN cs.photo_url
         END as image,
         u.username as provider_name,
-        u.profile_image as provider_image,
-        COALESCE(AVG(rv.rating), 0) as provider_rating,
-        COUNT(DISTINCT rv.id) as provider_review_count
+        u.profile_image as provider_image
       FROM favorites f
       LEFT JOIN rentals r ON f.item_type = 'stay' AND f.item_id = r.id
       LEFT JOIN concierge_services cs ON f.item_type = 'service' AND f.item_id = cs.id
@@ -92,14 +90,7 @@ const favoriteModel = {
           WHEN f.item_type = 'stay' THEN r.owner_id = u.id
           WHEN f.item_type = 'service' THEN cs.owner_id = u.id
         END
-      LEFT JOIN bookings b ON r.id = b.rental_id
-      LEFT JOIN reviews rv ON b.id = rv.booking_id
       WHERE f.user_id = $1
-      GROUP BY 
-        f.id, f.user_id, f.item_id, f.item_type, f.created_at,
-        r.id, r.title, r.description, r.price, r.image,
-        cs.id, cs.name, cs.description, cs.price, cs.photo_url,
-        u.id, u.username, u.profile_image
       ORDER BY f.created_at DESC
     `;
     try {

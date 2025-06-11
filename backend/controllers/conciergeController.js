@@ -410,6 +410,30 @@ const conciergeController = {
       });
     }
   },
+
+  // Get all services for a specific user
+  getUserServices: async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const result = await appPool.query(
+        'SELECT * FROM concierge_services WHERE owner_id = $1 AND is_active = true ORDER BY created_at DESC',
+        [id]
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result.rows
+      });
+    } catch (error) {
+      console.error('Error fetching user concierge services:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching user concierge services',
+        error: error.message
+      });
+    }
+  },
 };
 
 module.exports = conciergeController;

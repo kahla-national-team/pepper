@@ -16,6 +16,10 @@ const rentalRoutes = require('./routes/rentalRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const conciergeRoutes = require('./routes/conciergeRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const serviceRequestRoutes = require('./routes/serviceRequestRoutes');
 
 const app = express();
 
@@ -82,6 +86,11 @@ app.use('/api/rentals', rentalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/favorites', favoriteRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/services', conciergeRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/service-requests', serviceRequestRoutes);
+app.use('/api/concierge', conciergeRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

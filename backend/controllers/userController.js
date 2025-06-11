@@ -68,7 +68,7 @@ const userController = {
       const token = jwt.sign(
         { id: user.id, username: user.username },
         config.jwtSecret,
-        { expiresIn: '24h' }
+        { expiresIn: '7d' }
       );
 
       res.status(201).json({
@@ -124,7 +124,7 @@ const userController = {
       const token = jwt.sign(
         { id: user.id, username: user.username },
         config.jwtSecret,
-        { expiresIn: '24h' }
+        { expiresIn: '7d' }
       );
 
       console.log('Login successful for user:', identifier);
@@ -262,6 +262,100 @@ const userController = {
       console.error('Error updating profile:', error);
       res.status(500).json({ 
         message: 'Error updating profile', 
+        error: error.message 
+      });
+    }
+  },
+
+  // Get user by ID
+  getUserById: async (req, res) => {
+    try {
+      const userModel = new User(req.app.locals.pool);
+      const user = await userModel.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Error fetching user', 
+        error: error.message 
+      });
+    }
+  },
+
+  // Get follow status
+  getFollowStatus: async (req, res) => {
+    try {
+      // For now, return a default response as follow functionality is not implemented
+      res.json({ isFollowing: false });
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Error fetching follow status', 
+        error: error.message 
+      });
+    }
+  },
+
+  // Refresh token
+  refreshToken: async (req, res) => {
+    try {
+      const userModel = new User(req.app.locals.pool);
+      const user = await userModel.findById(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Generate new token
+      const token = jwt.sign(
+        { id: user.id, username: user.username },
+        config.jwtSecret,
+        { expiresIn: '7d' }
+      );
+
+      res.json({ token });
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      res.status(500).json({ 
+        message: 'Error refreshing token', 
+        error: error.message 
+      });
+    }
+  },
+
+  // Get current user
+  getCurrentUser: async (req, res) => {
+    try {
+      const userModel = new User(req.app.locals.pool);
+      const user = await userModel.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Error fetching current user', 
+        error: error.message 
+      });
+    }
+  },
+
+  // Update user
+  updateUser: async (req, res) => {
+    try {
+      const userModel = new User(req.app.locals.pool);
+      const { full_name } = req.body;
+      
+      if (!full_name) {
+        return res.status(400).json({ message: 'Full name is required' });
+      }
+
+      const updatedUser = await userModel.updateProfile(req.user.id, { full_name });
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Error updating user', 
         error: error.message 
       });
     }

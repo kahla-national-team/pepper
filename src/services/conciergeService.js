@@ -1,4 +1,5 @@
 import api from './api';
+import axios from 'axios';
 
 export const conciergeService = {
   // Create a new concierge service
@@ -67,7 +68,14 @@ export const conciergeService = {
   // Get all concierge services
   getAllServices: async () => {
     try {
-      const response = await api.get('/concierge/all');
+      // Create a new axios instance without auth interceptor for public access
+      const publicApi = axios.create({
+        baseURL: 'http://localhost:5000/api',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      const response = await publicApi.get('/concierge/all');
       return response.data;
     } catch (error) {
       console.error('Error fetching services:', error);

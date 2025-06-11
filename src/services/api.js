@@ -5,8 +5,10 @@ const API_URL = 'http://localhost:5000/api';
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Accept': 'application/json'
-  }
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  },
+  withCredentials: true
 });
 
 // Add token to requests if it exists
@@ -23,6 +25,44 @@ api.interceptors.request.use((config) => {
   
   return config;
 });
+
+// Add response interceptor to handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If the error is 401 and we haven't tried to refresh the token yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh the token
+        const response = await axios.post(`${API_URL}/users/refresh-token`, {}, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          withCredentials: true
+        });
+
+        const { token } = response.data;
+        localStorage.setItem('token', token);
+
+        // Retry the original request with the new token
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // If refresh fails, logout the user
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export const authService = {
   login: async (identifier, password) => {
@@ -79,6 +119,19 @@ export const authService = {
 
   isAuthenticated: () => {
     return !!localStorage.getItem('token');
+  },
+
+  refreshToken: async () => {
+    try {
+      const response = await api.post('/users/refresh-token');
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        return response.data.token;
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      throw error;
+    }
   }
 };
 

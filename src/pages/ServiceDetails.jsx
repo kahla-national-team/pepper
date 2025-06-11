@@ -1,13 +1,16 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-
+import { useAuth } from '../context/AuthContext';
+import BookingForm from '../components/BookingForm';
 
 function ServiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [service, setService] = useState(null);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const { user } = useAuth();
 
   console.log('ServiceDetails rendering with id:', id);
 
@@ -57,6 +60,23 @@ function ServiceDetails() {
 
     fetchService();
   }, [id]);
+
+  const handleBookClick = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setShowBookingForm(true);
+  };
+
+  const handleBookingSuccess = (booking) => {
+    setShowBookingForm(false);
+    navigate(`/booking-success/${booking.id}`);
+  };
+
+  const handleBookingCancel = () => {
+    setShowBookingForm(false);
+  };
 
   if (loading) {
     return (
@@ -135,9 +155,24 @@ function ServiceDetails() {
                   <p className="text-2xl font-bold text-gray-900">{service.price}</p>
                   <p className="text-sm text-gray-500">per service</p>
                 </div>
-                <button className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  Book Now
-                </button>
+                {!showBookingForm ? (
+                  <button 
+                    className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={handleBookClick}
+                  >
+                    Book Now
+                  </button>
+                ) : (
+                  <BookingForm
+                    item={{
+                      id,
+                      type: 'service',
+                      price: service.price
+                    }}
+                    onSuccess={handleBookingSuccess}
+                    onCancel={handleBookingCancel}
+                  />
+                )}
               </div>
             </div>
           </div>

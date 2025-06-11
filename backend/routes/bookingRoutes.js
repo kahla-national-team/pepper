@@ -3,22 +3,22 @@ const router = express.Router();
 const bookingController = require('../controllers/bookingController');
 const auth = require('../middleware/auth');
 
-// Apply authentication middleware to all routes
-router.use(auth);
+// Get all bookings for current user
+router.get('/', auth, bookingController.getUserBookings);
+
+// Get booking by ID
+router.get('/:id', auth, bookingController.getBookingById);
 
 // Create a new booking
-router.post('/', bookingController.createBooking);
+router.post('/', auth, bookingController.create);
 
-// Get all bookings for the current user
-router.get('/my-bookings', bookingController.getUserBookings);
+// Cancel a booking
+router.post('/:id/cancel', auth, bookingController.cancel);
 
-// Get a specific booking
-router.get('/:id', bookingController.getBooking);
+// Check availability
+router.get('/check-availability', auth, bookingController.checkAvailability);
 
-// Update a booking
-router.put('/:id', bookingController.updateBooking);
-
-// Delete a booking
-router.delete('/:id', bookingController.deleteBooking);
+// Webhook route (no auth required as it's called by Stripe)
+router.post('/webhook', express.raw({ type: 'application/json' }), bookingController.handleWebhook);
 
 module.exports = router;

@@ -7,7 +7,7 @@ const rentalController = require('../controllers/rentalController');
 // Get all rentals with filtering
 router.get('/', async (req, res) => {
   try {
-    const { whatService, location } = req.query;
+    const { destination, guests, rating, favorites, priceRange, duration } = req.query;
     let query = `
       SELECT 
         r.id,
@@ -27,22 +27,39 @@ router.get('/', async (req, res) => {
         COUNT(DISTINCT rv.id) as review_count
       FROM rentals r
       LEFT JOIN users u ON r.owner_id = u.id
-      LEFT JOIN bookings b ON r.id = b.rental_id
-      LEFT JOIN reviews rv ON b.id = rv.booking_id
+      LEFT JOIN reviews rv ON r.id = rv.rental_id
       WHERE r.is_active = true AND r.is_available = true
     `;
 
     const queryParams = [];
     const conditions = [];
 
-    if (whatService) {
-      conditions.push(`(r.title ILIKE $${queryParams.length + 1} OR r.description ILIKE $${queryParams.length + 1})`);
-      queryParams.push(`%${whatService}%`);
+    if (destination && destination.trim()) {
+      conditions.push(`(r.address ILIKE $${queryParams.length + 1} OR r.city ILIKE $${queryParams.length + 1})`);
+      queryParams.push(`%${destination}%`);
     }
 
-    if (location) {
-      conditions.push(`r.address ILIKE $${queryParams.length + 1}`);
-      queryParams.push(`%${location}%`);
+    if (guests) {
+      const totalGuests = parseInt(guests.adults || 0) + parseInt(guests.children || 0) + parseInt(guests.babies || 0);
+      if (totalGuests > 0) {
+        conditions.push(`r.max_guests >= $${queryParams.length + 1}`);
+        queryParams.push(totalGuests);
+      }
+    }
+
+    if (favorites === 'true') {
+      conditions.push(`r.is_favorite = true`);
+    }
+
+    if (priceRange) {
+      if (priceRange.min && priceRange.min > 0) {
+        conditions.push(`r.price >= $${queryParams.length + 1}`);
+        queryParams.push(parseFloat(priceRange.min));
+      }
+      if (priceRange.max && priceRange.max > 0) {
+        conditions.push(`r.price <= $${queryParams.length + 1}`);
+        queryParams.push(parseFloat(priceRange.max));
+      }
     }
 
     if (conditions.length > 0) {
@@ -51,8 +68,15 @@ router.get('/', async (req, res) => {
 
     query += `
       GROUP BY r.id, u.username, u.profile_image
-      ORDER BY r.created_at DESC
     `;
+
+    // Add HAVING clause for rating filter (aggregate function)
+    if (rating && rating > 0) {
+      query += ` HAVING COALESCE(AVG(rv.rating), 0) >= $${queryParams.length + 1}`;
+      queryParams.push(parseFloat(rating));
+    }
+
+    query += ` ORDER BY r.created_at DESC`;
 
     const { rows } = await req.app.locals.pool.query(query, queryParams);
 
@@ -84,7 +108,7 @@ router.get('/', async (req, res) => {
     res.json(formattedRentals);
   } catch (error) {
     console.error('Error fetching rentals:', error);
-    res.status(500).json({ message: 'Error fetching rentals' });
+    res.status(500).json({ message: 'Error fetching rentals', error: error.message });
   }
 });
 
@@ -100,8 +124,7 @@ router.get('/:id', async (req, res) => {
         COUNT(DISTINCT rv.id) as review_count
       FROM rentals r
       LEFT JOIN users u ON r.owner_id = u.id
-      LEFT JOIN bookings b ON r.id = b.rental_id
-      LEFT JOIN reviews rv ON b.id = rv.booking_id
+      LEFT JOIN reviews rv ON r.id = rv.rental_id
       WHERE r.id = $1 AND r.is_active = true
       GROUP BY r.id, u.username, u.profile_image
     `, [req.params.id]);
@@ -147,32 +170,34 @@ router.get('/:id/reviews', async (req, res) => {
   try {
     const { rows } = await req.app.locals.pool.query(`
       SELECT 
-        r.id,
-        r.rating,
-        r.comment,
-        r.created_at,
-        u.username as user_name,
-        u.profile_image as user_image
+        r.*,
+        u.username,
+        u.profile_image
       FROM reviews r
-      JOIN bookings b ON r.booking_id = b.id
       LEFT JOIN users u ON r.user_id = u.id
-      WHERE b.rental_id = $1
+      WHERE r.rental_id = $1
       ORDER BY r.created_at DESC
     `, [req.params.id]);
 
-    const formattedReviews = rows.map(review => ({
-      id: review.id,
-      rating: review.rating,
-      comment: review.comment,
-      created_at: review.created_at,
-      user_name: review.user_name || 'Anonymous',
-      user_image: review.user_image || '/placeholder-avatar.png'
-    }));
-
-    res.json(formattedReviews);
+    res.json(rows);
   } catch (error) {
     console.error('Error fetching rental reviews:', error);
     res.status(500).json({ message: 'Error fetching rental reviews' });
+  }
+});
+
+// Get rentals by user/owner ID
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { rows } = await req.app.locals.pool.query(
+      `SELECT * FROM rentals WHERE owner_id = $1 AND is_active = true`,
+      [userId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching rentals by user:', error);
+    res.status(500).json({ message: 'Error fetching rentals by user' });
   }
 });
 

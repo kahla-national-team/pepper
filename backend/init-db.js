@@ -135,7 +135,11 @@ async function initializeDatabase() {
         start_date date NOT NULL,
         end_date date NOT NULL,
         guests integer,
+        total_amount numeric(10, 2) NOT NULL,
         status booking_status DEFAULT 'pending',
+        payment_status varchar(20) DEFAULT 'pending',
+        payment_intent_id varchar(255),
+        payment_id integer REFERENCES payments(id) ON DELETE SET NULL,
         created_at timestamp with time zone DEFAULT now(),
         updated_at timestamp with time zone DEFAULT now()
       );
@@ -160,11 +164,13 @@ async function initializeDatabase() {
     await appPool.query(`
       CREATE TABLE IF NOT EXISTS payments (
         id serial PRIMARY KEY,
+        booking_id integer REFERENCES bookings(id) ON DELETE SET NULL,
         service_request_id integer REFERENCES service_requests(id) ON DELETE CASCADE,
         amount numeric(10, 2) NOT NULL,
         payment_method varchar(50),
         payment_status varchar(20) DEFAULT 'pending',
         transaction_id varchar(100),
+        payment_intent_id varchar(255),
         paid_at timestamp with time zone,
         created_at timestamp with time zone DEFAULT now()
       );
@@ -197,14 +203,46 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS reviews (
         id serial PRIMARY KEY,
         user_id integer REFERENCES users(id),
-        booking_id integer REFERENCES bookings(id) ON DELETE SET NULL,
-        service_request_id integer REFERENCES service_requests(id) ON DELETE SET NULL,
+        rental_id integer REFERENCES rentals(id) ON DELETE SET NULL,
+        service_id integer REFERENCES concierge_services(id) ON DELETE SET NULL,
         rating integer NOT NULL,
         comment text,
+        reviewer_name varchar(255),
+        reviewer_email varchar(255),
         created_at timestamp with time zone DEFAULT now(),
         updated_at timestamp with time zone DEFAULT now()
       );
     `);
+
+    // Add reviewer columns if they don't exist
+    try {
+      await appPool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'reviews' 
+            AND column_name = 'reviewer_name'
+          ) THEN
+            ALTER TABLE reviews ADD COLUMN reviewer_name varchar(255);
+          END IF;
+
+          IF NOT EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'reviews' 
+            AND column_name = 'reviewer_email'
+          ) THEN
+            ALTER TABLE reviews ADD COLUMN reviewer_email varchar(255);
+          END IF;
+        END $$;
+      `);
+      console.log('Reviewer columns added successfully');
+    } catch (error) {
+      console.error('Error adding reviewer columns:', error);
+    }
+
     await appPool.query(`
       CREATE TABLE IF NOT EXISTS favorites (
         id SERIAL PRIMARY KEY,
@@ -215,6 +253,36 @@ async function initializeDatabase() {
         UNIQUE (user_id, item_id, item_type)
       );
     `);
+    await appPool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+        `);
+      await appPool.query(`
+    CREATE TABLE IF NOT EXISTS reviews (        
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    service_id INTEGER NOT NULL REFERENCES concierge_services(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+      `); 
+      await appPool.query(` 
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    
     console.log('All tables created successfully');
   } catch (error) {
     console.error('Error creating tables:', error);

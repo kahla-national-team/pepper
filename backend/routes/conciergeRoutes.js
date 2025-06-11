@@ -4,7 +4,10 @@ const conciergeController = require('../controllers/conciergeController');
 const auth = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
 
-// All routes require authentication
+// Get all active concierge services (public route)
+router.get('/all', conciergeController.getAllServices);
+
+// All other routes require authentication
 router.use(auth);
 
 // Create a new concierge service with photo upload
@@ -13,11 +16,8 @@ router.post('/', upload.single('photo'), conciergeController.createService);
 // Get all services for the authenticated owner
 router.get('/my-services', conciergeController.getOwnerServices);
 
-// Get services by user ID
-router.get('/user/:userId', conciergeController.getServicesByUserId);
-
-// Get all active concierge services
-router.get('/all', conciergeController.getAllServices);
+// Get all services for a specific user
+router.get('/user/:id', conciergeController.getUserServices);
 
 // Get service details by ID
 router.get('/:id', conciergeController.getServiceById);

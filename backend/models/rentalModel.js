@@ -3,7 +3,7 @@ class Rental {
     this.pool = pool;
   }
 
-  static async findAllActive() {
+  async findAllActive() {
     const { rows } = await this.pool.query(
       `SELECT * FROM rentals
        WHERE is_active = true AND is_available = true
@@ -12,7 +12,7 @@ class Rental {
     return rows;
   }
 
-  static async findById(id) {
+  async findById(id) {
     const { rows } = await this.pool.query(
       `SELECT * FROM rentals
        WHERE id = $1 AND is_active = true`,
@@ -21,7 +21,7 @@ class Rental {
     return rows[0];
   }
 
-  static async create(data) {
+  async create(data) {
     const cols = [
       'owner_id','title','description','address','city',
       'price','max_guests','bedrooms','beds','bathrooms',
@@ -45,7 +45,7 @@ class Rental {
     return rows[0];
   }
 
-  static async update(id, data) {
+  async update(id, data) {
     const fields = [];
     const values = [];
     let idx = 1;
@@ -70,7 +70,7 @@ class Rental {
     return rows[0];
   }
 
-  static async deactivate(id) {
+  async deactivate(id) {
     const { rows } = await this.pool.query(
       `UPDATE rentals
        SET is_active = false, updated_at = now()

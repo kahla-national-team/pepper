@@ -6,11 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import { FaStar, FaClock, FaHeart, FaRegHeart } from 'react-icons/fa';
 import favoriteService from '../services/favoriteService';
 
-const ServiceCard = ({ service, isSelected, onClick }) => {
+const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initialIsFavorite = false, isHomePage = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isFavoriteLoading, setIsFavoriteLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(isHomePage ? false : initialIsFavorite);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const navigate = useNavigate();
 
   // Default values for service
@@ -28,19 +28,17 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
-      if (id) {
+      if (id && !isHomePage) {
         try {
           const status = await favoriteService.isFavorite(id, 'service');
           setIsFavorite(status);
         } catch (error) {
           console.error('Error checking favorite status:', error);
-        } finally {
-          setIsFavoriteLoading(false);
         }
       }
     };
     checkFavoriteStatus();
-  }, [id]);
+  }, [id, isHomePage]);
 
   const handleClick = (e) => {
     // Prevent navigation when clicking the favorite button
@@ -62,16 +60,28 @@ const ServiceCard = ({ service, isSelected, onClick }) => {
 
     try {
       setIsFavoriteLoading(true);
-      if (isFavorite) {
-        await favoriteService.removeFavorite(id, 'service');
-        setIsFavorite(false);
-      } else {
-        await favoriteService.addFavorite(id, 'service');
-        setIsFavorite(true);
+      if (isHomePage) {
+        if (isFavorite) {
+          await favoriteService.removeFavorite(id);
+          setIsFavorite(false);
+        } else {
+          try {
+            await favoriteService.addFavorite(id, 'service');
+            setIsFavorite(true);
+          } catch (error) {
+            if (error.message === 'Please sign in to add favorites') {
+              // Redirect to login page
+              navigate('/login');
+              return;
+            }
+            throw error;
+          }
+        }
+      } else if (onUnlike) {
+        await onUnlike(id);
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      // You might want to show a toast notification here
     } finally {
       setIsFavoriteLoading(false);
     }
@@ -183,7 +193,10 @@ ServiceCard.propTypes = {
     })
   }).isRequired,
   isSelected: PropTypes.bool,
-  onClick: PropTypes.func
+  onClick: PropTypes.func,
+  onUnlike: PropTypes.func,
+  isHomePage: PropTypes.bool,
+  isFavorite: PropTypes.bool
 };
 
 export default ServiceCard;

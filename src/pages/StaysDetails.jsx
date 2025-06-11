@@ -1,8 +1,13 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaStar, FaBed, FaBath, FaUsers, FaMapMarkerAlt, FaCalendarAlt, FaCheck, FaUser } from 'react-icons/fa';
 import { rentalService } from '../services/rentalService';
+import { reviewService } from '../services/reviewService';
+import Review from '../components/Review';
+import { useAuth } from '../context/AuthContext';
+import BookingForm from '../components/BookingForm';
+import RentalLocationMap from '../components/RentalLocationMap';
 
 const StaysDetails = () => {
   const { id } = useParams();
@@ -12,6 +17,12 @@ const StaysDetails = () => {
   const [stay, setStay] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const { user } = useAuth();
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [reviewStats, setReviewStats] = useState({
+    totalReviews: 0,
+    averageRating: 0
+  });
 
   useEffect(() => {
     const fetchStayDetails = async () => {
@@ -23,6 +34,12 @@ const StaysDetails = () => {
         // Fetch reviews for this stay
         const reviewsData = await rentalService.getRentalReviews(id);
         setReviews(reviewsData);
+        
+        // Fetch review statistics
+        const statsResponse = await reviewService.getItemReviewStats(id, 'rental');
+        if (statsResponse.success) {
+          setReviewStats(statsResponse.data);
+        }
         
         setError(null);
       } catch (err) {
@@ -94,6 +111,23 @@ const StaysDetails = () => {
     });
   };
 
+  const handleBookClick = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setShowBookingForm(true);
+  };
+
+  const handleBookingSuccess = (booking) => {
+    setShowBookingForm(false);
+    navigate(`/booking-success/${booking.id}`);
+  };
+
+  const handleBookingCancel = () => {
+    setShowBookingForm(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -124,7 +158,7 @@ const StaysDetails = () => {
           </div>
 
           <div className="p-6 md:p-8">
-            {/* Header Section */}
+            {/* Header Section with Review Stats */}
             <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{stay.title}</h1>
@@ -133,12 +167,27 @@ const StaysDetails = () => {
                   <span>{stay.address}</span>
                 </div>
               </div>
-              <div className="mt-4 md:mt-0 flex items-center">
-                <FaStar className="text-yellow-400 mr-1" />
-                <span className="font-semibold">{stay.provider?.rating?.toFixed(1) || '5.0'}</span>
-                <span className="text-gray-500 ml-1">
-                  ({stay.provider?.reviewCount || 0} reviews)
+              <div className="mt-4 md:mt-0">
+                <div className="flex items-center mb-2">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, index) => (
+                      <FaStar
+                        key={index}
+                        className={`${
+                          index < Math.round(reviewStats.averageRating)
+                            ? 'text-yellow-400'
+                            : 'text-gray-300'
+                        } w-5 h-5`}
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-2 font-semibold text-gray-900">
+                    {reviewStats.averageRating.toFixed(1)}
                 </span>
+                </div>
+                <p className="text-gray-600 text-sm">
+                  {reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? 'review' : 'reviews'}
+                </p>
               </div>
             </div>
 
@@ -180,6 +229,17 @@ const StaysDetails = () => {
               <p className="text-gray-600 leading-relaxed">{stay.description}</p>
             </div>
 
+            {/* Location Map */}
+            {stay.location && (
+              <div className="mb-8">
+                <RentalLocationMap 
+                  location={stay.location}
+                  address={stay.address}
+                  title={stay.title}
+                />
+              </div>
+            )}
+
             {/* Features */}
             {stay.features && stay.features.length > 0 && (
               <div className="mb-8">
@@ -197,7 +257,10 @@ const StaysDetails = () => {
 
             {/* Host Information */}
             <div className="border-t border-gray-200 pt-8">
-              <div className="flex items-center mb-6">
+              <Link 
+                to={`/users/${stay.provider?.id}`}
+                className="flex items-center mb-6 hover:opacity-80 transition-opacity"
+              >
                 <img
                   src={stay.provider?.image || '/placeholder-avatar.png'}
                   alt={stay.provider?.name || 'Host'}
@@ -207,12 +270,12 @@ const StaysDetails = () => {
                   }}
                 />
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 hover:text-[#ff385c] transition-colors">
                     Hosted by {stay.provider?.name || 'Host'}
                   </h3>
                   <p className="text-gray-600">Member since {stay.provider?.joinDate || '2024'}</p>
                 </div>
-              </div>
+              </Link>
 
               {/* Contact Host */}
               {stay.provider?.email && (
@@ -230,175 +293,88 @@ const StaysDetails = () => {
                   <h2 className="text-2xl font-semibold text-gray-900">Guest Reviews</h2>
                   <p className="text-gray-600 mt-1">What our guests are saying about this stay</p>
                 </div>
-                <div className="mt-4 md:mt-0 flex items-center space-x-4">
-                  <div className="flex items-center bg-gray-50 px-4 py-2 rounded-lg">
-                    <div className="flex items-center mr-2">
-                      {renderStars(Math.round(stay.provider?.rating || 0))}
+                <div className="mt-4 md:mt-0">
+                  <div className="flex items-center mb-2">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, index) => (
+                        <FaStar
+                          key={index}
+                          className={`${
+                            index < Math.round(reviewStats.averageRating)
+                              ? 'text-yellow-400'
+                              : 'text-gray-300'
+                          } w-5 h-5`}
+                        />
+                      ))}
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-semibold text-gray-900">
-                        {stay.provider?.rating?.toFixed(1) || '0.0'}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {stay.provider?.reviewCount || 0} reviews
-                      </div>
-                    </div>
+                    <span className="ml-2 font-semibold text-gray-900">
+                      {reviewStats.averageRating.toFixed(1)}
+                    </span>
                   </div>
-                  <button
-                    onClick={() => {
-                      // TODO: Implement review submission
-                      alert('Review submission coming soon!');
-                    }}
-                    className="px-6 py-2 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff385c] focus:ring-offset-2"
-                  >
-                    Write a Review
-                  </button>
+                  <p className="text-gray-600 text-sm">
+                    {reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? 'review' : 'reviews'}
+                  </p>
                 </div>
               </div>
 
-              {reviews.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {(showAllReviews ? reviews : reviews.slice(0, 4)).map((review) => (
-                    <motion.div
-                      key={review.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-                    >
-                      <div className="p-6">
-                        {/* Review Header */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center">
-                            <div className="relative">
-                              <img
-                                src={review.user_image}
-                                alt={review.user_name}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-[#ff385c]"
-                                onError={(e) => {
-                                  e.target.src = '/placeholder-avatar.png';
-                                }}
-                              />
-                              <div className="absolute -bottom-1 -right-1 bg-[#ff385c] text-white text-xs px-2 py-0.5 rounded-full">
-                                {review.rating}
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <h4 className="font-medium text-gray-900">{review.user_name}</h4>
-                              <p className="text-sm text-gray-500">{formatDate(review.created_at)}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            {renderStars(review.rating)}
-                          </div>
-                        </div>
-
-                        {/* Review Content */}
-                        <div className="space-y-4">
-                          <p className="text-gray-600 line-clamp-3">{review.comment}</p>
-                          
-                          {/* Review Actions */}
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                            <div className="flex items-center space-x-4">
-                              <button
-                                onClick={() => {
-                                  // TODO: Implement helpful vote
-                                  alert('Helpful vote coming soon!');
-                                }}
-                                className="flex items-center text-gray-500 hover:text-[#ff385c] transition-colors"
-                              >
-                                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                </svg>
-                                Helpful
-                              </button>
-                              <button
-                                onClick={() => {
-                                  // TODO: Implement reply
-                                  alert('Reply functionality coming soon!');
-                                }}
-                                className="flex items-center text-gray-500 hover:text-[#ff385c] transition-colors"
-                              >
-                                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                                </svg>
-                                Reply
-                              </button>
-                            </div>
-                            <button
-                              onClick={() => {
-                                // TODO: Implement report
-                                alert('Report functionality coming soon!');
-                              }}
-                              className="text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center">
-                    <FaStar className="text-gray-400 w-8 h-8" />
+              {/* Review Posting Section */}
+              <div className="bg-white rounded-lg shadow-md p-6 mb-8 border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Share Your Experience</h3>
+                    <p className="text-sm text-gray-600">Help others by writing a review</p>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Reviews Yet</h3>
-                  <p className="text-gray-600 mb-6">Be the first to share your experience at this stay</p>
-                  <button
-                    onClick={() => {
-                      // TODO: Implement review submission
-                      alert('Review submission coming soon!');
-                    }}
-                    className="px-6 py-3 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff385c] focus:ring-offset-2"
-                  >
-                    Write the First Review
-                  </button>
                 </div>
-              )}
+                <Review 
+                  itemId={id} 
+                  itemType="rental" 
+                  currentUser={user}
+                  onReviewSubmit={() => {
+                    fetchStayDetails();
+                  }}
+                />
+              </div>
 
-              {reviews.length > 4 && (
-                <div className="mt-8 text-center">
-                  <button
-                    onClick={() => setShowAllReviews(!showAllReviews)}
-                    className="inline-flex items-center px-6 py-3 border border-[#ff385c] text-[#ff385c] rounded-lg hover:bg-[#ff385c] hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff385c] focus:ring-offset-2"
-                  >
-                    {showAllReviews ? (
-                      <>
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
-                        </svg>
-                        Show Less
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                        Show All {reviews.length} Reviews
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
+              {/* Existing Reviews */}
+              <div className="space-y-6">
+              <Review 
+                itemId={id} 
+                itemType="rental" 
+                currentUser={user}
+                  onReviewSubmit={() => {
+                    fetchStayDetails();
+                  }}
+                  showReviewForm={false}
+              />
+              </div>
             </div>
 
             {/* Booking Section */}
             <div className="mt-8 p-6 bg-gray-50 rounded-lg">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-[#ff385c]">{stay.price}</p>
+                  <p className="text-2xl font-bold text-[#ff385c]">${stay.price}</p>
                   <p className="text-gray-600">per night</p>
                 </div>
-                <button
-                  onClick={() => alert('Booking functionality coming soon!')}
-                  className="mt-4 md:mt-0 px-8 py-3 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff385c] focus:ring-offset-2"
-                >
-                  Book Now
-                </button>
+                {!showBookingForm ? (
+                  <button
+                    onClick={handleBookClick}
+                    className="mt-4 md:mt-0 px-8 py-3 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff385c] focus:ring-offset-2"
+                  >
+                    Book Now
+                  </button>
+                ) : (
+                  <BookingForm
+                    item={{
+                      id,
+                      type: 'stay',
+                      price: stay.price,
+                      maxGuests: stay.max_guests
+                    }}
+                    onSuccess={handleBookingSuccess}
+                    onCancel={handleBookingCancel}
+                  />
+                )}
               </div>
             </div>
           </div>

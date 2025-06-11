@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaUsers, FaCar, FaHome, FaMoneyBillWave, FaChartLine, FaStar, FaArrowUp, FaPlus } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import SummaryCard from '../components/Dashboard/SummaryCard';
 import RecentActivity from '../components/Dashboard/RecentActivity';
 import WelcomeSection from '../components/Dashboard/WelcomeSection';
@@ -165,7 +164,6 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">Loading dashboard statistics...</div>
         </div>
@@ -176,7 +174,6 @@ const Dashboard = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-red-600">{error}</div>
         </div>
@@ -186,7 +183,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       <div className="container mx-auto px-4 py-8">
         <WelcomeSection />
 

@@ -1,0 +1,14 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "terminals": [
+    {
+      "name": "cmd",
+      "command": "Command"
+    }
+  ],
+  "install": "npm install",
+  "start": "npm run dev"
+}

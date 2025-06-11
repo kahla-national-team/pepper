@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo-nav.svg';
 import Button from './Button';
 import ProfileSidebar from './Dashboard/ProfileSidebar';
 import { FaUser } from 'react-icons/fa';
+import { useSearchMode } from '../context/SearchModeContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { activeMode, changeMode } = useSearchMode();
+
+  // Check if we're on dashboard pages
+  const isDashboardPage = location.pathname.includes('/dashboard') || 
+                         location.pathname.includes('/add-property') ||
+                         location.pathname.includes('/profile') ||
+                         location.pathname.includes('/calendar') ||
+                         location.pathname.includes('/reports');
 
   useEffect(() => {
     // Check if user is logged in
@@ -53,6 +63,14 @@ const Navbar = () => {
     setIsProfileOpen(false);
   };
 
+  const handleModeChange = (mode) => {
+    changeMode(mode);
+    // Navigate to home page when switching modes
+    if (window.location.pathname !== '/') {
+      navigate('/');
+    }
+  };
+
   return (
     <>
       <nav className="bg-white text-black p-4 shadow-md">
@@ -64,10 +82,44 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links with Toggle Buttons - Always visible but inactive on dashboard */}
           <div className="hidden md:flex space-x-8">
-            <Link to="/stays" className="text-gray-700 hover:text-[#ff385c] transition-colors">Stays</Link>
-            <Link to="/service2" className="text-gray-700 hover:text-[#ff385c] transition-colors">Services</Link>
+            <button
+              onClick={() => {
+                changeMode('stays');
+                if (isDashboardPage) {
+                  navigate('/');
+                }
+              }}
+              className={`flex items-center gap-2 py-2 px-1 border-b-2 transition-all duration-200 font-medium text-sm ${
+                isDashboardPage 
+                  ? 'border-transparent text-gray-400 hover:text-gray-600' 
+                  : activeMode === 'stays' 
+                    ? 'border-[#ff385c] text-[#ff385c]' 
+                    : 'border-transparent text-gray-700 hover:text-[#ff385c]'
+              }`}
+            >
+              <span className="text-lg">🏠</span>
+              <span>Stays</span>
+            </button>
+            <button
+              onClick={() => {
+                changeMode('services');
+                if (isDashboardPage) {
+                  navigate('/');
+                }
+              }}
+              className={`flex items-center gap-2 py-2 px-1 border-b-2 transition-all duration-200 font-medium text-sm ${
+                isDashboardPage 
+                  ? 'border-transparent text-gray-400 hover:text-gray-600' 
+                  : activeMode === 'services' 
+                    ? 'border-[#ff385c] text-[#ff385c]' 
+                    : 'border-transparent text-gray-700 hover:text-[#ff385c]'
+              }`}
+            >
+              <span className="text-lg">👑</span>
+              <span>Services</span>
+            </button>
             <Link to="/dashboard" className="text-gray-700 hover:text-[#ff385c] transition-colors">Host Service</Link>
           </div>
 

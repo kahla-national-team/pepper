@@ -1,17 +1,21 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaStar, FaClock, FaMapMarkerAlt, FaEnvelope, FaCheck, FaCalendarAlt } from 'react-icons/fa';
 import { conciergeService } from '../services/conciergeService';
-import Navbar from '../components/Navbar';
+import Review from '../components/Review';
+import { useAuth } from '../context/AuthContext';
+import BookingForm from '../components/BookingForm';
 
 const DetailsPage = () => {
   const { type, id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showBookingForm, setShowBookingForm] = useState(false);
 
   useEffect(() => {
     const fetchItemDetails = async () => {
@@ -51,6 +55,24 @@ const DetailsPage = () => {
     return null;
   };
 
+  const handleBookClick = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setShowBookingForm(true);
+  };
+
+  const handleBookingSuccess = (booking) => {
+    setShowBookingForm(false);
+    // Show success message or redirect to booking details
+    navigate(`/booking-success/${booking.id}`);
+  };
+
+  const handleBookingCancel = () => {
+    setShowBookingForm(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -77,7 +99,6 @@ const DetailsPage = () => {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Back Button */}
@@ -112,33 +133,40 @@ const DetailsPage = () => {
                 {item.category && (
                   <div className="absolute top-4 right-4 bg-[#ff385c] text-white px-3 py-1 rounded-full text-sm font-medium">
                     {item.category}
-    </div>
+                  </div>
                 )}
-      </div>
+              </div>
 
               {/* Details Section */}
               <div className="md:w-1/2 p-6 md:p-8">
                 {/* Provider Info */}
                 <div className="flex items-center mb-6">
-                  <img
-                    src={item.provider.image}
-                    alt={item.provider.name}
-                    className="w-12 h-12 rounded-full border-2 border-[#ff385c] mr-4"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/placeholder-avatar.png';
-                    }}
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{item.provider.name}</div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <FaStar className="text-yellow-400 mr-1" />
-                      <span>{item.provider.rating.toFixed(1)}</span>
-                      <span className="mx-1">•</span>
-                      <span>{item.provider.reviewCount} reviews</span>
+                  <Link 
+                    to={`/users/${item.provider.id}`}
+                    className="flex items-center hover:opacity-80 transition-opacity"
+                  >
+                    <img
+                      src={item.provider.image}
+                      alt={item.provider.name}
+                      className="w-12 h-12 rounded-full border-2 border-[#ff385c] mr-4"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/placeholder-avatar.png';
+                      }}
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 hover:text-[#ff385c] transition-colors">
+                        {item.provider.name}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <FaStar className="text-yellow-400 mr-1" />
+                        <span>{item.provider.rating.toFixed(1)}</span>
+                        <span className="mx-1">•</span>
+                        <span>{item.provider.reviewCount} reviews</span>
+                      </div>
                     </div>
-        </div>
-      </div>
+                  </Link>
+                </div>
 
                 {/* Title and Description */}
                 <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -164,7 +192,7 @@ const DetailsPage = () => {
                       <span>{formattedAvailability}</span>
                     </div>
                   )}
-          </div>
+                </div>
 
                 {/* Features */}
                 <div className="mb-8">
@@ -175,41 +203,96 @@ const DetailsPage = () => {
                         <FaCheck className="text-[#ff385c] mr-2 flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
-              ))}
-            </ul>
-          </div>
+                    ))}
+                  </ul>
+                </div>
 
                 {/* Price and Booking */}
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex items-center justify-between">
-            <div>
+                    <div>
                       <p className="text-2xl font-bold text-[#ff385c]">{item.price}</p>
                       <p className="text-sm text-gray-500">per service</p>
-              </div>
-              <button
+                    </div>
+                    <button
                       className="px-8 py-3 bg-[#ff385c] text-white font-medium rounded-lg hover:bg-[#e31c5f] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff385c]"
-                      onClick={() => {
-                        // TODO: Implement booking functionality
-                        alert('Booking functionality coming soon!');
-                      }}
+                      onClick={handleBookClick}
                     >
                       Book Now
-              </button>
-        </div>
-      </div>
+                    </button>
+                  </div>
+                </div>
 
                 {/* Contact Info */}
                 {item.provider.email && (
                   <div className="mt-6 flex items-center text-gray-600 bg-gray-50 p-4 rounded-lg">
                     <FaEnvelope className="text-[#ff385c] mr-2" />
                     <span>Contact provider: {item.provider.email}</span>
-              </div>
+                  </div>
                 )}
               </div>
             </div>
           </motion.div>
+
+          {/* Booking Section */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Book Now</h2>
+                  <p className="text-gray-600">${item?.price} per night</p>
+                </div>
+                {!showBookingForm && (
+                  <button
+                    onClick={handleBookClick}
+                    className="px-6 py-3 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors"
+                  >
+                    Book Now
+                  </button>
+                )}
+              </div>
+
+              {showBookingForm && (
+                <BookingForm
+                  item={{
+                    id,
+                    type,
+                    price: item?.price
+                  }}
+                  onSuccess={handleBookingSuccess}
+                  onCancel={handleBookingCancel}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Reviews Section */}
+          <div className="mt-12 border-t border-gray-200 pt-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Customer Reviews</h2>
+                <p className="text-gray-600 mt-1">What our customers are saying about this service</p>
+              </div>
+              <div className="mt-4 md:mt-0 flex items-center">
+                <FaStar className="text-yellow-400 mr-1" />
+                <span className="font-semibold">{item.provider.rating.toFixed(1)}</span>
+                <span className="text-gray-500 ml-1">
+                  ({item.provider.reviewCount} reviews)
+                </span>
+              </div>
+            </div>
+
+            {/* Reviews Section */}
+            <Review 
+              itemId={id} 
+              itemType="service" 
+              onReviewSubmit={() => {
+                fetchItemDetails();
+              }}
+            />
+          </div>
+        </div>
       </div>
-    </div>
     </>
   );
 };
