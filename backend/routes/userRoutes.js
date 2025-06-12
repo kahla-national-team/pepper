@@ -14,7 +14,7 @@ router.get('/fullname', auth, userController.getFullName);
 router.get('/email', auth, userController.getEmailAdress);
 router.post('/profile/image', auth, userController.updateProfileImage);
 router.put('/profile', auth, userController.updateProfile);
-router.post('/refresh-token', auth, userController.refreshToken);
+router.post('/refresh-token', userController.refreshToken);
 
 // Get user by ID
 router.get('/:id', auth, userController.getUserById);

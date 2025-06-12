@@ -29,6 +29,7 @@ const StaysDetails = () => {
       try {
         setLoading(true);
         const data = await rentalService.getRental(id);
+        console.log('StaysDetails - fetched stay data:', data);
         setStay(data);
         
         // Fetch reviews for this stay
@@ -43,6 +44,7 @@ const StaysDetails = () => {
         
         setError(null);
       } catch (err) {
+        console.error('StaysDetails - error fetching stay:', err);
         setError(err.message || 'Failed to fetch stay details');
       } finally {
         setLoading(false);
@@ -116,6 +118,8 @@ const StaysDetails = () => {
       navigate('/login');
       return;
     }
+    console.log('StaysDetails - handleBookClick - stay object:', stay);
+    console.log('StaysDetails - handleBookClick - id from URL:', id);
     setShowBookingForm(true);
   };
 
@@ -369,7 +373,7 @@ const StaysDetails = () => {
                       id,
                       type: 'stay',
                       price: stay.price,
-                      maxGuests: stay.max_guests
+                      maxGuests: stay.max_guests || 1
                     }}
                     onSuccess={handleBookingSuccess}
                     onCancel={handleBookingCancel}

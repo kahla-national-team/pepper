@@ -19,7 +19,7 @@ const favoriteRoutes = require('./routes/favoriteRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const conciergeRoutes = require('./routes/conciergeRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
-const serviceRequestRoutes = require('./routes/serviceRequestRoutes');
+const serviceRequestRoutes = require('./routes/conciergeRoutes');
 
 const app = express();
 
@@ -78,6 +78,9 @@ app.locals.pool = pool;
 // Make upload middleware available in app
 app.locals.upload = upload;
 
+// Run database migrations on startup
+const updateBookingsTable = require('./migrations/update_bookings_table');
+
 // Routes
 app.use('/api', routes);
 app.use('/api/users', userRoutes);
@@ -87,10 +90,14 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reviews', reviewRoutes);
-app.use('/api/services', conciergeRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/concierge', conciergeRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/service-requests', conciergeRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -99,8 +106,18 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, async () => {
+  try {
+    console.log(`Server is running on port ${PORT}`);
+    
+    // Run database migrations
+    console.log('Running database migrations...');
+    await updateBookingsTable();
+    console.log('Database migrations completed successfully!');
+  } catch (error) {
+    console.error('Error running migrations:', error);
+    console.log('Server started but migrations failed. Some features may not work properly.');
+  }
 });
 
 module.exports = app; 

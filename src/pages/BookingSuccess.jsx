@@ -14,12 +14,8 @@ const BookingSuccess = () => {
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {
-        const response = await bookingService.getBooking(id);
-        if (response.success) {
-          setBooking(response.data);
-        } else {
-          throw new Error(response.message || 'Failed to fetch booking details');
-        }
+        const bookingData = await bookingService.getBooking(id);
+        setBooking(bookingData);
       } catch (err) {
         console.error('Error fetching booking:', err);
         setError(err.message || 'Failed to load booking details');
@@ -75,19 +71,19 @@ const BookingSuccess = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Booking Details</h2>
             
             <div className="space-y-6">
-              {/* Item Details */}
+              {/* Rental Details */}
               <div className="flex items-start space-x-4">
                 <img
-                  src={booking.item.image}
-                  alt={booking.item.title}
+                  src={booking.rental_image || '/placeholder-image.jpg'}
+                  alt={booking.rental_title}
                   className="w-24 h-24 object-cover rounded-lg"
                   onError={(e) => {
                     e.target.src = '/placeholder-image.jpg';
                   }}
                 />
                 <div>
-                  <h3 className="font-medium text-gray-900">{booking.item.title}</h3>
-                  <p className="text-gray-600">{booking.item.description}</p>
+                  <h3 className="font-medium text-gray-900">{booking.rental_title}</h3>
+                  <p className="text-gray-600">Booking ID: {booking.id}</p>
                 </div>
               </div>
 
@@ -105,23 +101,15 @@ const BookingSuccess = () => {
                   </div>
 
                   <div className="flex items-center text-gray-600">
-                    <FaMapMarkerAlt className="text-[#ff385c] mr-3" />
+                    <FaUser className="text-[#ff385c] mr-3" />
                     <div>
-                      <p className="text-sm text-gray-500">Location</p>
-                      <p className="font-medium">{booking.item.location?.address || 'Location not specified'}</p>
+                      <p className="text-sm text-gray-500">Guests</p>
+                      <p className="font-medium">{booking.guests} {booking.guests === 1 ? 'Guest' : 'Guests'}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center text-gray-600">
-                    <FaUser className="text-[#ff385c] mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-500">Booked by</p>
-                      <p className="font-medium">{booking.user.name}</p>
-                    </div>
-                  </div>
-
                   <div className="flex items-center text-gray-600">
                     <FaCreditCard className="text-[#ff385c] mr-3" />
                     <div>
@@ -129,19 +117,28 @@ const BookingSuccess = () => {
                       <p className="font-medium">${booking.total_amount}</p>
                     </div>
                   </div>
+
+                  <div className="flex items-center text-gray-600">
+                    <FaCheckCircle className="text-[#ff385c] mr-3" />
+                    <div>
+                      <p className="text-sm text-gray-500">Status</p>
+                      <p className="font-medium capitalize">{booking.status}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Provider Contact */}
-              {booking.item.provider && (
+              {/* Selected Services */}
+              {booking.services && booking.services.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Provider Contact</h4>
-                  <div className="flex items-center text-gray-600">
-                    <FaEnvelope className="text-[#ff385c] mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{booking.item.provider.email}</p>
-                    </div>
+                  <h4 className="font-medium text-gray-900 mb-3">Selected Services</h4>
+                  <div className="space-y-2">
+                    {booking.services.map((service, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="text-gray-700">{service.service_name || service.service_title}</span>
+                        <span className="text-gray-900 font-medium">${service.service_price}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -161,7 +158,7 @@ const BookingSuccess = () => {
                 </li>
                 <li className="flex items-start">
                   <FaCheckCircle className="text-green-500 mt-1 mr-3 flex-shrink-0" />
-                  <p className="text-gray-600">Contact the provider directly if you need to make any changes to your booking.</p>
+                  <p className="text-gray-600">Contact the property owner directly if you need to make any changes to your booking.</p>
                 </li>
               </ul>
             </div>
@@ -169,7 +166,7 @@ const BookingSuccess = () => {
             {/* Action Buttons */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
               <button
-                onClick={() => navigate('/dashboard/bookings')}
+                onClick={() => navigate('/dashboard')}
                 className="flex-1 px-6 py-3 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors"
               >
                 View All Bookings

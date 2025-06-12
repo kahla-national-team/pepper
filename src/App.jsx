@@ -24,10 +24,13 @@ import FavoritesPage from './pages/FavoritesPage';
 import UserProfile from './pages/UserProfile';
 import BookingSuccess from './pages/BookingSuccess';
 import BookingPage from './pages/BookingPage';
+import AdminDashboard from './pages/AdminDashboard';
 import './App.css';
 import { MapVisibilityProvider } from './context/MapVisibilityContext';
 import { AuthProvider } from './context/AuthContext';
 import { SearchModeProvider } from './context/SearchModeContext';
+import Bookings from './pages/Bookings';
+import BookingRequests from './pages/BookingRequests';
 
 const libraries = ['places', 'marker', 'maps'];
 
@@ -85,6 +88,9 @@ const AppContent = () => {
                     <BookingSuccess />
                   </ProtectedRoute>
                 } />
+                <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                <Route path="/bookings" element={<Bookings />} />
+                <Route path="/booking-requests" element={<BookingRequests />} />
               </Routes>
             </div>
             {!hideFooter && <Footer />}

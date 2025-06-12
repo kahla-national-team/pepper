@@ -300,21 +300,31 @@ const userController = {
   // Refresh token
   refreshToken: async (req, res) => {
     try {
+      const token = req.header('Authorization')?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({ message: 'No token provided for refresh' });
+      }
+
+      const decoded = jwt.decode(token);
+      if (!decoded || !decoded.id) {
+        return res.status(401).json({ message: 'Invalid token for refresh' });
+      }
+
       const userModel = new User(req.app.locals.pool);
-      const user = await userModel.findById(req.user.id);
+      const user = await userModel.findById(decoded.id);
       
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: 'User not found for token refresh' });
       }
 
       // Generate new token
-      const token = jwt.sign(
+      const newToken = jwt.sign(
         { id: user.id, username: user.username },
-        config.jwtSecret,
+        process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );
 
-      res.json({ token });
+      res.json({ token: newToken });
     } catch (error) {
       console.error('Token refresh error:', error);
       res.status(500).json({ 

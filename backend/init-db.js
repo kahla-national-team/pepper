@@ -1,6 +1,8 @@
 const { Pool } = require('pg');
 const config = require('./config/config');
 const User = require('./models/User');
+const createBookingStatusType = require('./migrations/create_booking_status_type');
+const updateBookingsStatusColumn = require('./migrations/update_bookings_status_column');
 
 async function initializeDatabase() {
   // Create a pool for the default postgres database
@@ -29,16 +31,13 @@ async function initializeDatabase() {
   const userModel = new User(appPool);
 
   try {
+    // Create custom types
+    await createBookingStatusType();
+
     // Create enum types first
     await appPool.query(`
       DO $$ BEGIN
         CREATE TYPE renting_term_type AS ENUM ('night_term', 'short_term', 'long_term');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-
-      DO $$ BEGIN
-        CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
@@ -126,6 +125,129 @@ async function initializeDatabase() {
     `);
     console.log('Rentals table created successfully');
 
+    // Create payments table first
+    await appPool.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id serial PRIMARY KEY,
+        booking_id integer,
+        service_request_id integer,
+        amount numeric(10, 2) NOT NULL,
+        payment_method varchar(50),
+        payment_status varchar(20) DEFAULT 'pending',
+        transaction_id varchar(100),
+        payment_intent_id varchar(255),
+        paid_at timestamp with time zone,
+        created_at timestamp with time zone DEFAULT now()
+      );
+    `);
+    console.log('Payments table created successfully');
+
+    // Create bookings table with varchar status first
+    await appPool.query(`
+      CREATE TABLE IF NOT EXISTS bookings (
+        id serial PRIMARY KEY,
+        user_id integer REFERENCES users(id),
+        rental_id integer REFERENCES rentals(id) ON DELETE CASCADE,
+        start_date date NOT NULL,
+        end_date date NOT NULL,
+        guests integer,
+        total_amount numeric(10, 2) NOT NULL,
+        status varchar(20) DEFAULT 'pending',
+        payment_status varchar(20) DEFAULT 'pending',
+        payment_intent_id varchar(255),
+        payment_id integer,
+        created_at timestamp with time zone DEFAULT now(),
+        updated_at timestamp with time zone DEFAULT now()
+      );
+    `);
+    console.log('Bookings table created successfully');
+
+    // Now update the status column to use the enum type
+    await updateBookingsStatusColumn();
+
+    // Create concierge services table
+    await appPool.query(`
+     CREATE TABLE IF NOT EXISTS concierge_services (
+    id serial NOT NULL,
+    owner_id integer references users(id),
+    name character varying(100) NOT NULL,
+    category character varying(50) NOT NULL,
+    description text,
+    price numeric(10, 2) NOT NULL,
+    duration_minutes integer,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT concierge_services_pkey PRIMARY KEY (id)
+);
+
+    `);
+    console.log('Concierge services table created successfully');
+
+    // Create rentals table
+    await appPool.query(`
+      CREATE TABLE IF NOT EXISTS rentals (
+        id serial NOT NULL,
+        owner_id integer references users(id),
+        title character varying(150) NOT NULL,
+        description text,
+        address text NOT NULL,
+        city character varying(100),
+        price numeric(10, 2) NOT NULL,
+        max_guests integer DEFAULT 1,
+        bedrooms integer,
+        beds integer,
+        bathrooms integer,
+        rating numeric(2, 1),
+        reviews integer,
+        image text,
+        latitude numeric(9, 6),
+        longitude numeric(9, 6),
+        amenities text[],
+        room_type character varying(50),
+        available_dates jsonb,
+        is_available boolean DEFAULT true,
+        created_at timestamp with time zone DEFAULT now(),
+        updated_at timestamp with time zone DEFAULT now(),
+        renting_term renting_term_type DEFAULT 'night_term'::renting_term_type,
+        is_favorite boolean DEFAULT false,
+        is_active boolean DEFAULT true,
+        CONSTRAINT rentals_pkey PRIMARY KEY (id)
+      );
+
+      -- Add renting_term column if it doesn't exist
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_name = 'rentals' 
+          AND column_name = 'renting_term'
+        ) THEN
+          ALTER TABLE rentals 
+          ADD COLUMN renting_term renting_term_type DEFAULT 'night_term'::renting_term_type;
+        END IF;
+      END $$;
+    `);
+    console.log('Rentals table created successfully');
+
+    // Create payments table first
+    await appPool.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id serial PRIMARY KEY,
+        booking_id integer,
+        service_request_id integer,
+        amount numeric(10, 2) NOT NULL,
+        payment_method varchar(50),
+        payment_status varchar(20) DEFAULT 'pending',
+        transaction_id varchar(100),
+        payment_intent_id varchar(255),
+        paid_at timestamp with time zone,
+        created_at timestamp with time zone DEFAULT now()
+      );
+    `);
+    console.log('Payments table created successfully');
+
     // Create bookings table
     await appPool.query(`
       CREATE TABLE IF NOT EXISTS bookings (
@@ -136,14 +258,15 @@ async function initializeDatabase() {
         end_date date NOT NULL,
         guests integer,
         total_amount numeric(10, 2) NOT NULL,
-        status booking_status DEFAULT 'pending',
+        status booking_status_enum DEFAULT 'pending',
         payment_status varchar(20) DEFAULT 'pending',
         payment_intent_id varchar(255),
-        payment_id integer REFERENCES payments(id) ON DELETE SET NULL,
+        payment_id integer,
         created_at timestamp with time zone DEFAULT now(),
         updated_at timestamp with time zone DEFAULT now()
       );
     `);
+    console.log('Bookings table created successfully');
 
     // Create service requests table
     await appPool.query(`
@@ -159,22 +282,31 @@ async function initializeDatabase() {
         updated_at timestamp with time zone DEFAULT now()
       );
     `);
+    console.log('Service requests table created successfully');
 
-    // Create payments table
+    // Add foreign key constraints after all tables exist
     await appPool.query(`
-      CREATE TABLE IF NOT EXISTS payments (
-        id serial PRIMARY KEY,
-        booking_id integer REFERENCES bookings(id) ON DELETE SET NULL,
-        service_request_id integer REFERENCES service_requests(id) ON DELETE CASCADE,
-        amount numeric(10, 2) NOT NULL,
-        payment_method varchar(50),
-        payment_status varchar(20) DEFAULT 'pending',
-        transaction_id varchar(100),
-        payment_intent_id varchar(255),
-        paid_at timestamp with time zone,
-        created_at timestamp with time zone DEFAULT now()
-      );
+      ALTER TABLE payments
+      ADD CONSTRAINT fk_payments_booking
+      FOREIGN KEY (booking_id)
+      REFERENCES bookings(id)
+      ON DELETE SET NULL;
     `);
+    await appPool.query(`
+      ALTER TABLE payments
+      ADD CONSTRAINT fk_payments_service_request
+      FOREIGN KEY (service_request_id)
+      REFERENCES service_requests(id)
+      ON DELETE CASCADE;
+    `);
+    await appPool.query(`
+      ALTER TABLE bookings
+      ADD CONSTRAINT fk_bookings_payment
+      FOREIGN KEY (payment_id)
+      REFERENCES payments(id)
+      ON DELETE SET NULL;
+    `);
+    console.log('Foreign key constraints added successfully');
 
     // Create factures table
     await appPool.query(`
@@ -261,26 +393,26 @@ async function initializeDatabase() {
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-        `);
-      await appPool.query(`
-    CREATE TABLE IF NOT EXISTS reviews (        
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    service_id INTEGER NOT NULL REFERENCES concierge_services(id) ON DELETE CASCADE,
-    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    comment TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-      `); 
-      await appPool.query(` 
-      CREATE TABLE IF NOT EXISTS messages (
-        id SERIAL PRIMARY KEY,
-        sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
     `);
+    await appPool.query(`
+      CREATE TABLE IF NOT EXISTS reviews (        
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      service_id INTEGER NOT NULL REFERENCES concierge_services(id) ON DELETE CASCADE,
+      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    `); 
+    await appPool.query(` 
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 
     
     console.log('All tables created successfully');

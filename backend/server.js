@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const dotenv = require('dotenv');
 const { Pool } = require('pg');
 const authRoutes = require('./routes/authRoutes');
@@ -8,6 +9,7 @@ const rentalRoutes = require('./routes/rentalRoutes');
 const conciergeRoutes = require('./routes/conciergeRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 dotenv.config();
 
@@ -30,6 +32,9 @@ pool.connect()
 // Make pool available in app
 app.locals.pool = pool;
 
+// Run database migrations on startup
+const updateBookingsTable = require('./migrations/update_bookings_table');
+
 // CORS configuration
 const corsOptions = {
   origin: ['http://localhost:5173', 'http://localhost:3000'],
@@ -41,6 +46,7 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Debug middleware to log requests
 app.use((req, res, next) => {
@@ -52,9 +58,15 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rentals', rentalRoutes);
-app.use('/api/services', conciergeRoutes);
+app.use('/api/concierge', conciergeRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
 
 // 404 handler
 app.use((req, res, next) => {
@@ -73,19 +85,18 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log('Available routes:');
-  console.log('- GET    /api/users/me');
-  console.log('- GET    /api/users/:id');
-  console.log('- GET    /api/favorites');
-  console.log('- POST   /api/favorites');
-  console.log('- DELETE /api/favorites/:itemType/:itemId');
-  console.log('- GET    /api/favorites/check/:itemType/:itemId');
-  console.log('- GET    /api/bookings');
-  console.log('- POST   /api/bookings');
-  console.log('- GET    /api/bookings/:id');
-  console.log('- POST   /api/bookings/:id/cancel');
+app.listen(PORT, async () => {
+  try {
+    console.log(`Server running on port ${PORT}`);
+    
+    // Run database migrations
+    console.log('Running database migrations...');
+    await updateBookingsTable();
+    console.log('Database migrations completed successfully!');
+  } catch (error) {
+    console.error('Error running migrations:', error);
+    console.log('Server started but migrations failed. Some features may not work properly.');
+  }
 });
 
 

@@ -1,3 +1,5 @@
+const BookingService = require('./BookingService');
+
 class Booking {
   constructor(pool) {
     this.pool = pool;
@@ -16,7 +18,6 @@ class Booking {
         status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
         payment_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),
         payment_intent_id VARCHAR(255),
-        payment_id INTEGER REFERENCES payments(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -32,16 +33,15 @@ class Booking {
       end_date,
       guests,
       total_amount,
-      payment_intent_id,
-      payment_id
+      payment_intent_id
     } = bookingData;
 
     const query = `
       INSERT INTO bookings (
         user_id, rental_id, start_date, end_date, guests,
-        total_amount, payment_intent_id, payment_id
+        total_amount, payment_intent_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
 
@@ -52,8 +52,7 @@ class Booking {
       end_date,
       guests,
       total_amount,
-      payment_intent_id,
-      payment_id
+      payment_intent_id || null
     ];
 
     const result = await this.pool.query(query, values);
@@ -64,46 +63,111 @@ class Booking {
     const query = `
       SELECT b.*, 
         r.title as rental_title,
-        r.image as rental_image,
-        p.transaction_id,
-        p.payment_method,
-        p.paid_at
+        r.image as rental_image
       FROM bookings b
       LEFT JOIN rentals r ON b.rental_id = r.id
-      LEFT JOIN payments p ON b.payment_id = p.id
       WHERE b.id = $1;
     `;
     const result = await this.pool.query(query, [id]);
-    return result.rows[0];
+    const booking = result.rows[0];
+    
+    if (booking) {
+      // Get services for this booking
+      const bookingServiceModel = new BookingService(this.pool);
+      const services = await bookingServiceModel.findByBookingId(id);
+      booking.services = services;
+    }
+    
+    return booking;
   }
 
   async findByUserId(userId) {
     const query = `
       SELECT b.*, 
         r.title as rental_title,
-        r.image as rental_image,
-        p.transaction_id,
-        p.payment_method,
-        p.paid_at
+        r.image as rental_image
       FROM bookings b
       LEFT JOIN rentals r ON b.rental_id = r.id
-      LEFT JOIN payments p ON b.payment_id = p.id
       WHERE b.user_id = $1
       ORDER BY b.created_at DESC;
     `;
     const result = await this.pool.query(query, [userId]);
-    return result.rows;
+    const bookings = result.rows;
+    
+    // Get services for each booking
+    const bookingServiceModel = new BookingService(this.pool);
+    for (const booking of bookings) {
+      const services = await bookingServiceModel.findByBookingId(booking.id);
+      booking.services = services;
+    }
+    
+    return bookings;
   }
 
-  async updateStatus(id, status) {  
+  async findByOwnerId(ownerId) {
     const query = `
-      UPDATE bookings
-      SET status = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-      RETURNING *;
+      SELECT b.*, 
+        r.title as rental_title,
+        r.image as rental_image,
+        u.username as guest_name,
+        u.email as guest_email
+      FROM bookings b
+      LEFT JOIN rentals r ON b.rental_id = r.id
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE r.owner_id = $1
+      ORDER BY b.created_at DESC;
     `;
-    const result = await this.pool.query(query, [status, id]);
-    return result.rows[0];
+    const result = await this.pool.query(query, [ownerId]);
+    const bookings = result.rows;
+    
+    // Get services for each booking
+    const bookingServiceModel = new BookingService(this.pool);
+    for (const booking of bookings) {
+      const services = await bookingServiceModel.findByBookingId(booking.id);
+      booking.services = services;
+    }
+    
+    return bookings;
+  }
+
+  async updateStatus(id, status) {
+    try {
+      console.log('Booking.updateStatus called with:', { id, status });
+      
+      // First verify the booking exists
+      const booking = await this.findById(id);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Validate status
+      const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed'];
+      if (!validStatuses.includes(status)) {
+        throw new Error(`Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
+      }
+
+      const query = `
+        UPDATE bookings 
+        SET status = $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING *
+      `;
+      
+      console.log('Executing query:', query, 'with params:', [status, id]);
+      
+      const result = await this.pool.query(query, [status, id]);
+      console.log('Query result:', result.rows[0]);
+      
+      if (result.rows.length === 0) {
+        throw new Error('Booking not found');
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error in Booking.updateStatus:', error);
+      throw error;
+    }
   }
 
   async updatePaymentStatus(id, paymentStatus, paymentIntentId = null) {
@@ -119,20 +183,42 @@ class Booking {
     return result.rows[0];
   }
 
-  async checkAvailability(itemId, itemType, startDate, endDate) {
+  async update(id, updateData) {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    for (const [key, val] of Object.entries(updateData)) {
+      fields.push(`${key} = $${idx}`);
+      values.push(val);
+      idx++;
+    }
+    values.push(id);
+
+    const query = `
+      UPDATE bookings
+      SET ${fields.join(',')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${idx}
+      RETURNING *;
+    `;
+
+    const result = await this.pool.query(query, values);
+    return result.rows[0];
+  }
+
+  async checkAvailability(rentalId, startDate, endDate) {
     const query = `
       SELECT COUNT(*) as count
       FROM bookings
-      WHERE item_id = $1
-      AND item_type = $2
+      WHERE rental_id = $1
       AND status != 'cancelled'
       AND (
-        (start_date <= $3 AND end_date >= $3)
-        OR (start_date <= $4 AND end_date >= $4)
-        OR (start_date >= $3 AND end_date <= $4)
+        (start_date <= $2 AND end_date >= $2)
+        OR (start_date <= $3 AND end_date >= $3)
+        OR (start_date >= $2 AND end_date <= $3)
       );
     `;
-    const result = await this.pool.query(query, [itemId, itemType, startDate, endDate]);
+    const result = await this.pool.query(query, [rentalId, startDate, endDate]);
     return result.rows[0].count === '0';
   }
 }

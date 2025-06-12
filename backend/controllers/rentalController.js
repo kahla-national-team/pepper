@@ -14,6 +14,10 @@ exports.getById = async (req, res, next) => {
   try {
     const rentalModel = new Rental(req.app.locals.pool);
     const rental = await rentalModel.findById(req.params.id);
+    
+    console.log('Rental data from database:', rental);
+    console.log('Rental price field:', rental?.price, 'Type:', typeof rental?.price);
+    
     if (!rental) return res.status(404).json({ message: 'Rental not found' });
     res.json(rental);
   } catch (err) {

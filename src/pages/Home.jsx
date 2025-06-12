@@ -124,11 +124,14 @@ const Home = () => {
         setIsLoading(true);
         const data = await rentalService.getRentals(staysFilters);
         
-        // Filter out rentals without coordinates
+        // Filter out rentals without coordinates and convert price to string
         const validRentals = data.filter(rental => rental.location && 
           typeof rental.location.lat === 'number' && 
           typeof rental.location.lng === 'number'
-        );
+        ).map(rental => ({
+          ...rental,
+          price: `$${rental.price}/night`
+        }));
         
         setStays(validRentals);
         
@@ -165,7 +168,12 @@ const Home = () => {
         setIsServicesLoading(true);
         const response = await conciergeService.getAllServices();
         if (response.success) {
-          setConciergeServices(response.data);
+          // Convert price to string format
+          const servicesWithStringPrice = response.data.map(service => ({
+            ...service,
+            price: `$${service.price}/day`
+          }));
+          setConciergeServices(servicesWithStringPrice);
         } else {
           throw new Error(response.message || 'Failed to fetch services');
         }

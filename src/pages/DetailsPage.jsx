@@ -55,6 +55,14 @@ const DetailsPage = () => {
     return null;
   };
 
+  // Helper function to extract numeric price from formatted string
+  const extractNumericPrice = (priceString) => {
+    if (!priceString) return 0;
+    // Extract numeric value from strings like "$50/hour" or "$100"
+    const priceMatch = priceString.match(/\$(\d+)/);
+    return priceMatch ? parseInt(priceMatch[1]) : 0;
+  };
+
   const handleBookClick = () => {
     if (!user) {
       navigate('/login');
@@ -257,7 +265,8 @@ const DetailsPage = () => {
                   item={{
                     id,
                     type,
-                    price: item?.price
+                    price: extractNumericPrice(item?.price),
+                    maxGuests: 10 // Default value for services, can be made configurable
                   }}
                   onSuccess={handleBookingSuccess}
                   onCancel={handleBookingCancel}

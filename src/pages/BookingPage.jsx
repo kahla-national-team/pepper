@@ -5,6 +5,7 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { bookingService } from '../services/bookingService';
 import { rentalService } from '../services/rentalService';
+import { conciergeService } from '../services/conciergeService';
 import { useAuth } from '../context/AuthContext';
 
 const BookingPage = () => {
@@ -18,22 +19,30 @@ const BookingPage = () => {
   const [checkOut, setCheckOut] = useState(null);
   const [guests, setGuests] = useState(1);
   const [processing, setProcessing] = useState(false);
+  const [ownerServices, setOwnerServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState([]);
 
   useEffect(() => {
-    const fetchStayDetails = async () => {
+    const fetchStayDetailsAndServices = async () => {
       try {
         setLoading(true);
-        const data = await rentalService.getRental(id);
-        setStay(data);
+        const rentalData = await rentalService.getRental(id);
+        setStay(rentalData);
         setError(null);
+
+        if (rentalData.ownerId) {
+          const servicesData = await conciergeService.getServicesByUserId(rentalData.ownerId);
+          setOwnerServices(servicesData);
+        }
+
       } catch (err) {
-        setError(err.message || 'Failed to fetch stay details');
+        setError(err.message || 'Failed to fetch stay details or services');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStayDetails();
+    fetchStayDetailsAndServices();
   }, [id]);
 
   const calculateNights = () => {
@@ -44,12 +53,30 @@ const BookingPage = () => {
     return 0;
   };
 
+  const handleServiceToggle = (serviceId) => {
+    setSelectedServices((prevSelected) => {
+      const serviceToAdd = ownerServices.find(s => s.id === serviceId);
+      if (!serviceToAdd) return prevSelected;
+
+      return prevSelected.some(s => s.id === serviceId)
+        ? prevSelected.filter((s) => s.id !== serviceId)
+        : [...prevSelected, serviceToAdd];
+    });
+  };
+
+  const calculateServicesTotal = () => {
+    return selectedServices.reduce((total, service) => {
+      return total + (service ? service.price : 0);
+    }, 0);
+  };
+
   const nights = calculateNights();
   const subtotal = nights * (stay?.price || 0);
   const cleaningFee = 75;
   const serviceFee = Math.round(subtotal * 0.12);
   const taxes = Math.round(subtotal * 0.08);
-  const total = subtotal + cleaningFee + serviceFee + taxes;
+  const servicesTotal = calculateServicesTotal();
+  const total = subtotal + cleaningFee + serviceFee + taxes + servicesTotal;
 
   const handleBooking = async () => {
     if (!user) {
@@ -65,12 +92,12 @@ const BookingPage = () => {
     try {
       setProcessing(true);
       const bookingData = {
-        item_id: id,
-        item_type: 'stay',
+        rental_id: id,
         start_date: checkIn.toISOString().split('T')[0],
         end_date: checkOut.toISOString().split('T')[0],
         total_amount: total,
-        guests: guests
+        guests: guests,
+        services: selectedServices,
       };
 
       const response = await bookingService.createBooking(bookingData);
@@ -190,6 +217,29 @@ const BookingPage = () => {
                 </select>
               </div>
 
+              {/* Services Section */}
+              {ownerServices.length > 0 && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-4">Add Services</h3>
+                  <div className="space-y-2">
+                    {ownerServices.map((service) => (
+                      <div key={service.id} className="flex items-center justify-between">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedServices.some(s => s.id === service.id)}
+                            onChange={() => handleServiceToggle(service.id)}
+                            className="form-checkbox h-5 w-5 text-[#ff385c] rounded"
+                          />
+                          <span className="ml-2 text-gray-700">{service.name} ({service.category})</span>
+                        </label>
+                        <span className="text-gray-900">${service.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Price Breakdown */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-gray-900 mb-4">Price Details</h3>
@@ -212,6 +262,12 @@ const BookingPage = () => {
                     <span className="text-gray-600">Taxes</span>
                     <span>${taxes}</span>
                   </div>
+                  {servicesTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Additional Services</span>
+                      <span>${servicesTotal}</span>
+                    </div>
+                  )}
                   <div className="border-t border-gray-200 pt-2 mt-2">
                     <div className="flex justify-between font-semibold">
                       <span>Total</span>

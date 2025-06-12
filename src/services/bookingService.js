@@ -4,11 +4,21 @@ export const bookingService = {
   // Create a new booking
   createBooking: async (bookingData) => {
     try {
+      console.log('bookingService - sending data:', bookingData);
       const response = await api.post('/bookings', bookingData);
       return response.data;
     } catch (error) {
       console.error('Error creating booking:', error);
-      throw error;
+      console.error('Error response:', error.response?.data);
+      
+      // Return a more specific error message
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else {
+        throw new Error('Failed to create booking. Please try again.');
+      }
     }
   },
 
@@ -46,19 +56,29 @@ export const bookingService = {
   },
 
   // Check availability for a date range
-  checkAvailability: async (itemId, itemType, startDate, endDate) => {
+  checkAvailability: async (rentalId, startDate, endDate) => {
     try {
       const response = await api.get('/bookings/check-availability', {
         params: {
-          itemId,
-          itemType,
-          startDate,
-          endDate
+          rental_id: rentalId,
+          start_date: startDate,
+          end_date: endDate
         }
       });
       return response.data;
     } catch (error) {
       console.error('Error checking availability:', error);
+      throw error;
+    }
+  },
+
+  // Get bookings for properties owned by the current user
+  getBookingsForOwner: async () => {
+    try {
+      const response = await api.get('/bookings/owner');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching owner bookings:', error);
       throw error;
     }
   }

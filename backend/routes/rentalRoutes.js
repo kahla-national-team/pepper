@@ -86,7 +86,7 @@ router.get('/', async (req, res) => {
       type: 'stay',
       title: rental.title,
       description: rental.description,
-      price: `$${rental.price}/night`,
+      price: parseFloat(rental.price),
       provider: {
         name: rental.provider_name || 'Host',
         rating: parseFloat(rental.provider_rating) || 0,
@@ -139,7 +139,8 @@ router.get('/:id', async (req, res) => {
       type: 'stay',
       title: rental.title,
       description: rental.description,
-      price: `$${rental.price}/night`,
+      price: parseFloat(rental.price),
+      ownerId: rental.owner_id,
       provider: {
         name: rental.provider_name || 'Host',
         rating: parseFloat(rental.provider_rating) || 0,

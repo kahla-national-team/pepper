@@ -21,6 +21,16 @@ class Rental {
     return rows[0];
   }
 
+  async getPriceById(id) {
+    const { rows } = await this.pool.query(
+      `SELECT id, price FROM rentals
+       WHERE id = $1 AND is_active = true`,
+      [id]
+    );
+    console.log('Price query result:', rows[0]);
+    return rows[0];
+  }
+
   async create(data) {
     const cols = [
       'owner_id','title','description','address','city',
