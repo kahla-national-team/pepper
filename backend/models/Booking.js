@@ -15,7 +15,7 @@ class Booking {
         end_date DATE NOT NULL,
         guests INTEGER,
         total_amount DECIMAL(10,2) NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
+        status booking_status NOT NULL DEFAULT 'pending',
         payment_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),
         payment_intent_id VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -130,7 +130,7 @@ class Booking {
     return bookings;
   }
 
-  async updateStatus(id, status) {
+  async updateStatus(id, status) {  
     try {
       console.log('Booking.updateStatus called with:', { id, status });
       
@@ -141,17 +141,17 @@ class Booking {
       }
 
       // Validate status
-      const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed'];
+      const validStatuses = ['pending', 'accepted', 'rejected', 'cancelled', 'completed'];
       if (!validStatuses.includes(status)) {
         throw new Error(`Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
       }
 
       const query = `
-        UPDATE bookings 
-        SET status = $1,
-            updated_at = CURRENT_TIMESTAMP
+        UPDATE bookings
+          SET status = $1::booking_status,
+              updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
-        RETURNING *
+          RETURNING *
       `;
       
       console.log('Executing query:', query, 'with params:', [status, id]);

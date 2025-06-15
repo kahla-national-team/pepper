@@ -85,7 +85,15 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
     budget: filters.budget || { min: 0, max: 10000 }
   };
 
-  const currentFilters = activeMode === 'stays' ? defaultStaysFilters : defaultServicesFilters;
+  const [currentFilters, setCurrentFilters] = useState(
+    activeMode === 'stays' ? defaultStaysFilters : defaultServicesFilters
+  );
+
+  // Update currentFilters when activeMode changes
+  useEffect(() => {
+    setCurrentFilters(activeMode === 'stays' ? defaultStaysFilters : defaultServicesFilters);
+  }, [activeMode]);
+
   const totalGuests = currentFilters.guests ? currentFilters.guests.adults + currentFilters.guests.children + currentFilters.guests.babies : 0;
 
   const amenities = [
@@ -209,37 +217,6 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
     }
   };
 
-  const toggleAmenity = (amenityId) => {
-    const newAmenities = currentFilters.amenities.includes(amenityId)
-      ? currentFilters.amenities.filter(id => id !== amenityId)
-      : [...currentFilters.amenities, amenityId];
-    
-    if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        amenities: newAmenities
-      });
-    }
-  };
-
-  const handleRatingChange = (rating) => {
-    if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        rating: currentFilters.rating === rating ? 0 : rating
-      });
-    }
-  };
-
-  const toggleFavorites = () => {
-    if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        favorites: !currentFilters.favorites
-      });
-    }
-  };
-
   const handleDateChange = (type, value) => {
     if (onFilterChange) {
       onFilterChange({
@@ -297,29 +274,6 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
     }
   };
 
-  const toggleServiceType = (serviceId) => {
-    const currentServiceTypes = currentFilters.serviceTypes || [];
-    const newServiceTypes = currentServiceTypes.includes(serviceId)
-      ? currentServiceTypes.filter(id => id !== serviceId)
-      : [...currentServiceTypes, serviceId];
-    
-    if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        serviceTypes: newServiceTypes
-      });
-    }
-  };
-
-  const handleAvailabilityChange = (availability) => {
-    if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        availability: currentFilters.availability === availability ? null : availability
-      });
-    }
-  };
-
   const handleServiceChange = (e) => {
     const value = e.target.value;
     
@@ -355,42 +309,6 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
     if (onSearch) onSearch(suggestion.name);
   };
 
-  const toggleDuration = (durationId) => {
-    if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        duration: currentFilters.duration === durationId ? null : durationId
-      });
-    }
-  };
-
-  const handlePriceRangeChange = (min, max) => {
-    const minValue = parseInt(min) || 0;
-    const maxValue = parseInt(max) || 1000;
-    
-    if (minValue > maxValue) {
-      if (onFilterChange) {
-        onFilterChange({
-          ...currentFilters,
-          priceRange: {
-            min: maxValue,
-            max: maxValue
-          }
-        });
-      }
-    } else {
-      if (onFilterChange) {
-        onFilterChange({
-          ...currentFilters,
-          priceRange: {
-            min: minValue,
-            max: maxValue
-          }
-        });
-      }
-    }
-  };
-
   const handleSearchButtonClick = () => {
     if (activeMode === 'stays') {
       if (onSearch) onSearch(currentFilters.destination);
@@ -406,6 +324,68 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   const HeartIcon = ({ filled }) => (
     <span className="text-red-500">{filled ? '♥' : '♡'}</span>
   );
+
+  // Filter handlers
+  const handleFilterChange = (type, value) => {
+    const newFilters = {
+        ...currentFilters,
+      [type]: value
+    };
+    setCurrentFilters(newFilters);
+    if (onFilterChange) {
+      onFilterChange(newFilters);
+    }
+  };
+
+  const toggleAmenity = (amenityId) => {
+    const newAmenities = currentFilters.amenities.includes(amenityId)
+      ? currentFilters.amenities.filter(id => id !== amenityId)
+      : [...currentFilters.amenities, amenityId];
+    
+    handleFilterChange('amenities', newAmenities);
+  };
+
+  const handleRatingChange = (rating) => {
+    handleFilterChange('rating', currentFilters.rating === rating ? 0 : rating);
+  };
+
+  const toggleFavorites = () => {
+    handleFilterChange('favorites', !currentFilters.favorites);
+  };
+
+  const handlePriceRangeChange = (min, max) => {
+    const minValue = parseInt(min) || 0;
+    const maxValue = parseInt(max) || 1000;
+    
+    if (minValue > maxValue) {
+      handleFilterChange('priceRange', {
+            min: maxValue,
+            max: maxValue
+        });
+    } else {
+      handleFilterChange('priceRange', {
+            min: minValue,
+            max: maxValue
+        });
+    }
+  };
+
+  const toggleDuration = (durationId) => {
+    handleFilterChange('duration', currentFilters.duration === durationId ? null : durationId);
+  };
+
+  const toggleServiceType = (serviceId) => {
+    const currentServiceTypes = currentFilters.serviceTypes || [];
+    const newServiceTypes = currentServiceTypes.includes(serviceId)
+      ? currentServiceTypes.filter(id => id !== serviceId)
+      : [...currentServiceTypes, serviceId];
+    
+    handleFilterChange('serviceTypes', newServiceTypes);
+  };
+
+  const handleAvailabilityChange = (availability) => {
+    handleFilterChange('availability', currentFilters.availability === availability ? null : availability);
+  };
 
   return (
     <div 
@@ -647,19 +627,48 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
         )}
       </div>
       
-      {/* Airbnb-style Filter Dropdown */}
+      {/* Filter Dropdown */}
       {isFilterOpen && (
-        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl z-50 mt-2 p-6 max-h-80 overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-[100] bg-black bg-opacity-50"
+          onClick={() => setIsFilterOpen(false)}
+        >
+          <div 
+            className="fixed top-[72px] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl p-6 max-h-[calc(100vh-72px)] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
           <div className="max-w-4xl mx-auto">
             {activeMode === 'stays' ? (
-              // Airbnb-style Stays Filters
+                // Stays Filters
               <div className="space-y-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">Filters</h2>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => {
+                          setCurrentFilters(defaultStaysFilters);
+                          if (onFilterChange) onFilterChange(defaultStaysFilters);
+                        }}
+                      >
+                        Clear all
+                      </button>
+                      <button 
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => setIsFilterOpen(false)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Duration of stay</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {durationOptions.map(option => (
                       <button
                         key={option.id}
+                          type="button"
                         className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
                           currentFilters.duration === option.id 
                             ? 'border-black bg-black text-white' 
@@ -706,6 +715,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                     {ratings.slice(0, 3).map(rating => (
                       <button
                         key={rating.value}
+                          type="button"
                         className={`flex items-center gap-3 w-full p-3 border-2 rounded-lg text-sm transition-all duration-200 ${
                           currentFilters.rating === rating.value 
                             ? 'border-black bg-black text-white' 
@@ -723,16 +733,74 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                     ))}
                   </div>
                 </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Amenities</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      {amenities.map(amenity => (
+                        <button
+                          key={amenity.id}
+                          type="button"
+                          className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
+                            currentFilters.amenities.includes(amenity.id)
+                              ? 'border-black bg-black text-white'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          }`}
+                          onClick={() => toggleAmenity(amenity.id)}
+                        >
+                          <span className="text-base">{amenity.icon}</span>
+                          <span className="text-sm">{amenity.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      className={`flex items-center gap-2 w-full p-3 border-2 rounded-lg text-sm transition-all duration-200 ${
+                        currentFilters.favorites
+                          ? 'border-black bg-black text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                      onClick={toggleFavorites}
+                    >
+                      <HeartIcon filled={currentFilters.favorites} />
+                      <span className="text-sm font-medium">Show favorites only</span>
+                    </button>
+                </div>
               </div>
             ) : (
-              // Airbnb-style Services Filters
+                // Services Filters
               <div className="space-y-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">Filters</h2>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => {
+                          setCurrentFilters(defaultServicesFilters);
+                          if (onFilterChange) onFilterChange(defaultServicesFilters);
+                        }}
+                      >
+                        Clear all
+                      </button>
+                      <button 
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => setIsFilterOpen(false)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Service type</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {serviceTypes.map(service => (
                       <button
                         key={service.id}
+                          type="button"
                         className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
                           (currentFilters.serviceTypes || []).includes(service.id) 
                             ? 'border-black bg-black text-white' 
@@ -753,14 +821,35 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                     {urgencyOptions.map(option => (
                       <button
                         key={option.id}
+                          type="button"
                         className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
                           currentFilters.urgency === option.id 
                             ? 'border-black bg-black text-white' 
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
-                        onClick={() => handleServiceTypeChange('urgency', option.id)}
+                          onClick={() => handleFilterChange('urgency', option.id)}
                       >
                         <span className="text-base">{option.icon}</span>
+                        <span className="text-sm">{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Availability</h3>
+                    <div className="space-y-2">
+                      {availabilityOptions.map(option => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
+                            currentFilters.availability === option.value 
+                              ? 'border-black bg-black text-white' 
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          }`}
+                          onClick={() => handleAvailabilityChange(option.value)}
+                        >
                         <span className="text-sm">{option.label}</span>
                       </button>
                     ))}
@@ -775,7 +864,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                       <input
                         type="number"
                         value={(currentFilters.budget || {}).min || 0}
-                        onChange={(e) => handleServiceTypeChange('budget', { 
+                          onChange={(e) => handleFilterChange('budget', { 
                           ...(currentFilters.budget || {}), 
                           min: parseInt(e.target.value) || 0 
                         })}
@@ -788,7 +877,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                       <input
                         type="number"
                         value={(currentFilters.budget || {}).max || 10000}
-                        onChange={(e) => handleServiceTypeChange('budget', { 
+                          onChange={(e) => handleFilterChange('budget', { 
                           ...(currentFilters.budget || {}), 
                           max: parseInt(e.target.value) || 10000 
                         })}
@@ -800,6 +889,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       )}

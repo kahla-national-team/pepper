@@ -1,7 +1,8 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy');
 const Booking = require('../models/Booking');
 const BookingService = require('../models/BookingService');
-const Rental = require('../models/Rental');
+const Rental = require('../models/rentalModel');
+const NotificationService = require('../services/notificationService');
 
 const bookingController = {
   // Create a new booking
@@ -99,6 +100,32 @@ const bookingController = {
         }
         console.log('Booking services created successfully');
       }
+
+      // Get user details for notification
+      const userResult = await req.app.locals.pool.query(
+        'SELECT full_name FROM users WHERE id = $1',
+        [req.user.id]
+      );
+      const user = userResult.rows[0];
+
+      // Get rental details for notification
+      const rentalModel = new Rental(req.app.locals.pool);
+      const rental = await rentalModel.findById(rental_id);
+
+      if (!rental) {
+        throw new Error('Rental not found');
+      }
+
+      // Create notification service instance
+      const notificationService = new NotificationService(req.app.locals.pool);
+
+      // Send notifications
+      await notificationService.notifyNewBooking({
+        ...booking,
+        property_name: rental.title,
+        user_name: user.full_name,
+        owner_id: rental.owner_id
+      });
 
       res.status(201).json({
         booking,
@@ -202,6 +229,12 @@ const bookingController = {
         await stripe.paymentIntents.cancel(booking.payment_intent_id);
       }
 
+      // Create notification service instance
+      const notificationService = new NotificationService(req.app.locals.pool);
+
+      // Send notification
+      await notificationService.notifyBookingStatusChange(booking, 'cancelled');
+
       res.json(updatedBooking);
     } catch (error) {
       console.error('Error canceling booking:', error);
@@ -260,7 +293,7 @@ const bookingController = {
           
           if (booking) {
             await bookingModel.updatePaymentStatus(booking.id, 'paid', paymentIntent.id);
-            await bookingModel.updateStatus(booking.id, 'confirmed');
+            await bookingModel.updateStatus(booking.id, 'accepted');
           }
           break;
 
@@ -297,7 +330,7 @@ const bookingController = {
       }
 
       // Define valid status values
-      const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed'];
+      const validStatuses = ['pending', 'accepted', 'rejected', 'cancelled', 'completed'];
       
       // Validate status value
       if (!validStatuses.includes(status)) {
@@ -334,7 +367,14 @@ const bookingController = {
         // Update the status
         const updatedBooking = await bookingModel.updateStatus(id, status);
         console.log('Booking updated successfully:', updatedBooking);
-        res.json(updatedBooking);
+
+        // Create notification service instance
+        const notificationService = new NotificationService(req.app.locals.pool);
+
+        // Send notification
+        await notificationService.notifyBookingStatusChange(booking, status);
+
+      res.json(updatedBooking);
       } catch (updateError) {
         console.error('Error in updateStatus query:', updateError);
         console.error('Error details:', {

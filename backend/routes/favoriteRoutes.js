@@ -4,8 +4,14 @@ const favoriteModel = require('../models/favoriteModel');
 const auth = require('../middleware/auth');
 
 // Initialize favorites table
-favoriteModel.createTable().catch(error => {
+router.use(async (req, res, next) => {
+  try {
+    await favoriteModel.createTable(req.app.locals.pool);
+    next();
+  } catch (error) {
   console.error('Error creating favorites table:', error);
+    next(error);
+  }
 });
 
 // Debug middleware for favorites routes
@@ -16,9 +22,10 @@ router.use((req, res, next) => {
 
 // Get all favorites for the current user
 router.get('/', auth, async (req, res) => {
+  const pool = req.app.locals.pool;
   try {
     console.log('Getting favorites for user:', req.user.id);
-    const favorites = await favoriteModel.getFavorites(req.user.id);
+    const favorites = await favoriteModel.getFavorites(pool, req.user.id);
     console.log('Found favorites:', favorites.length);
     res.json(favorites);
   } catch (error) {
@@ -42,6 +49,7 @@ router.get('/', auth, async (req, res) => {
 
 // Add an item to favorites
 router.post('/', auth, async (req, res) => {
+  const pool = req.app.locals.pool;
   try {
     const { itemId, itemType } = req.body;
     console.log('Adding favorite:', { userId: req.user.id, itemId, itemType });
@@ -61,7 +69,7 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    const favoriteId = await favoriteModel.addFavorite(req.user.id, itemId, itemType);
+    const favoriteId = await favoriteModel.addFavorite(pool, req.user.id, itemId, itemType);
     console.log('Added favorite:', favoriteId);
     res.status(201).json({ id: favoriteId, message: 'Item added to favorites' });
   } catch (error) {
@@ -79,11 +87,12 @@ router.post('/', auth, async (req, res) => {
 
 // Remove an item from favorites
 router.delete('/:id', auth, async (req, res) => {
+  const pool = req.app.locals.pool;
   try {
     const favoriteId = req.params.id;
     console.log('Removing favorite:', { userId: req.user.id, favoriteId });
 
-    const removed = await favoriteModel.removeFavoriteById(favoriteId, req.user.id);
+    const removed = await favoriteModel.removeFavoriteById(pool, favoriteId, req.user.id);
     console.log('Removed favorite:', removed);
     
     if (removed) {
@@ -102,6 +111,7 @@ router.delete('/:id', auth, async (req, res) => {
 
 // Check if an item is in favorites
 router.get('/check/:itemType/:itemId', auth, async (req, res) => {
+  const pool = req.app.locals.pool;
   try {
     const { itemId, itemType } = req.params;
     console.log('Checking favorite status:', { userId: req.user.id, itemId, itemType });
@@ -114,7 +124,7 @@ router.get('/check/:itemType/:itemId', auth, async (req, res) => {
       });
     }
 
-    const isFavorite = await favoriteModel.isFavorite(req.user.id, itemId, itemType);
+    const isFavorite = await favoriteModel.isFavorite(pool, req.user.id, itemId, itemType);
     console.log('Favorite status:', isFavorite);
     res.json({ isFavorite });
   } catch (error) {

@@ -51,7 +51,7 @@ const ProfileSidebar = ({ isOpen, onClose, user }) => {
             </Link>
             <Link to="/bookings" className="flex items-center space-x-3 p-3 hover:bg-[#fff1f2] rounded-lg transition-colors group">
               <FaHistory className="text-[#ff385c] group-hover:scale-110 transition-transform" />
-              <span className="text-gray-700 group-hover:text-[#ff385c]">My Bookings</span>
+              <span className="text-gray-700 group-hover:text-[#ff385c]">My Bookings and Factures</span>
             </Link>
             <Link to="/favorites" className="flex items-center space-x-3 p-3 hover:bg-[#fff1f2] rounded-lg transition-colors group">
               <FaHeart className="text-[#ff385c] group-hover:scale-110 transition-transform" />

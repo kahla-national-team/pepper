@@ -1,6 +1,6 @@
 const { appPool } = require('../config/database');
 
-async function updateBookingsTable() {
+async function updateBookingsTable(db) {
   try {
     console.log('Checking and updating bookings table...');
     
@@ -19,7 +19,7 @@ async function updateBookingsTable() {
         WHERE table_name = 'bookings' AND column_name = $1;
       `;
       
-      const checkResult = await appPool.query(checkQuery, [column.name]);
+      const checkResult = await db.query(checkQuery, [column.name]);
       
       if (checkResult.rows.length === 0) {
         // Add the missing column
@@ -28,7 +28,7 @@ async function updateBookingsTable() {
           ADD COLUMN ${column.name} ${column.type};
         `;
         
-        await appPool.query(alterQuery);
+        await db.query(alterQuery);
         console.log(`Column ${column.name} added to bookings table successfully`);
       } else {
         console.log(`Column ${column.name} already exists in bookings table`);
@@ -42,7 +42,7 @@ async function updateBookingsTable() {
       WHERE table_name = 'bookings' AND column_name = 'payment_id';
     `;
     
-    const paymentIdResult = await appPool.query(checkPaymentIdQuery);
+    const paymentIdResult = await db.query(checkPaymentIdQuery);
     
     if (paymentIdResult.rows.length === 0) {
       // Add payment_id column without foreign key constraint to avoid issues
@@ -51,7 +51,7 @@ async function updateBookingsTable() {
         ADD COLUMN payment_id INTEGER;
       `;
       
-      await appPool.query(addPaymentIdQuery);
+      await db.query(addPaymentIdQuery);
       console.log('Column payment_id added to bookings table successfully');
     } else {
       console.log('Column payment_id already exists in bookings table');
@@ -69,7 +69,7 @@ async function updateBookingsTable() {
       );
     `;
     
-    await appPool.query(createBookingServicesQuery);
+    await db.query(createBookingServicesQuery);
     console.log('booking_services table created/verified successfully');
     
     console.log('All database updates completed successfully!');

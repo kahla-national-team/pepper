@@ -393,26 +393,26 @@ async function initializeDatabase() {
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+        `);
+      await appPool.query(`
+    CREATE TABLE IF NOT EXISTS reviews (        
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    service_id INTEGER NOT NULL REFERENCES concierge_services(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+      `); 
+      await appPool.query(` 
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
-    await appPool.query(`
-      CREATE TABLE IF NOT EXISTS reviews (        
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      service_id INTEGER NOT NULL REFERENCES concierge_services(id) ON DELETE CASCADE,
-      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-      comment TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    `); 
-    await appPool.query(` 
-    CREATE TABLE IF NOT EXISTS messages (
-      id SERIAL PRIMARY KEY,
-      sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-      receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-      content TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
 
     
     console.log('All tables created successfully');

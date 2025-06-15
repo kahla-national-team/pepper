@@ -15,6 +15,8 @@ const pool = new Pool({
 const conciergeRoutes = require('./conciergeRoutes');
 const rentalRoutes = require('./rentalRoutes');
 const userRoutes = require('./userRoutes');
+const bookingRoutes = require('./bookingRoutes');
+const notificationRoutes = require('./notifications');
 
 // Root route
 router.get('/', (req, res) => {
@@ -23,7 +25,9 @@ router.get('/', (req, res) => {
         endpoints: {
             concierge: '/api/concierge',
             rentals: '/api/rentals',
-            users: '/api/users'
+            users: '/api/users',
+            bookings: '/api/bookings',
+            notifications: '/api/notifications'
         }
     });
 });
@@ -32,5 +36,7 @@ router.get('/', (req, res) => {
 router.use('/concierge', conciergeRoutes);
 router.use('/rentals', rentalRoutes);
 router.use('/users', userRoutes);
+router.use('/bookings', bookingRoutes);
+router.use('/notifications', notificationRoutes);
 
 module.exports = router;

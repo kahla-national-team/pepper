@@ -34,66 +34,73 @@ const BookingRequests = () => {
 
   const handleAcceptBooking = async (bookingId) => {
     try {
-      // Update booking status to confirmed
+      // Update booking status to accepted
       const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ status: 'confirmed' })
+        body: JSON.stringify({ status: 'accepted' })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to accept booking');
+        throw new Error(data.error || data.message || 'Failed to accept booking');
       }
 
       // Refresh bookings
       const updatedBookings = await bookingService.getBookingsForOwner();
       setBookings(updatedBookings);
+      
+      // Show success message
       alert('Booking request accepted successfully!');
+      console.log('✅ Booking updated:', data);
     } catch (err) {
-      console.error('Error accepting booking:', err);
+      console.error('❌ Error accepting booking:', err);
       alert(err.message || 'Failed to accept booking request. Please try again.');
     }
   };
 
   const handleRejectBooking = async (bookingId) => {
     try {
-      // Update booking status to cancelled
+      // Update booking status to rejected
       const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ status: 'cancelled' })
+        body: JSON.stringify({ status: 'rejected' })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to reject booking');
+        throw new Error(data.error || data.message || 'Failed to reject booking');
       }
 
       // Refresh bookings
       const updatedBookings = await bookingService.getBookingsForOwner();
       setBookings(updatedBookings);
+      
+      // Show success message
       alert('Booking request rejected successfully!');
+      console.log('✅ Booking updated:', data);
     } catch (err) {
-      console.error('Error rejecting booking:', err);
+      console.error('❌ Error rejecting booking:', err);
       alert(err.message || 'Failed to reject booking request. Please try again.');
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed':
+      case 'accepted':
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       case 'completed':

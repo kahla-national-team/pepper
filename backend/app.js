@@ -20,13 +20,14 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const conciergeRoutes = require('./routes/conciergeRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const serviceRequestRoutes = require('./routes/conciergeRoutes');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dgoz9p4ld',
-  api_key: process.env.CLOUDINARY_API_KEY || '733982826139735',
+  api_key: process.env.CLOUDINARY_API_KEY || '599637781456269',
   api_secret: process.env.CLOUDINARY_API_SECRET || 'QkPtrf1hBJ_oIpTHdGPZ3YNLcTA'
 });
 
@@ -43,20 +44,63 @@ const upload = multer({ storage: storage });
 
 // CORS configuration
 const corsOptions = {
-  origin: 'http://localhost:5173', // Vite's default port
+  origin: ['http://localhost:5173', 'https://api.cloudinary.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'X-Requested-With']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Content-Length',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'X-CSRF-Token'
+  ],
+  exposedHeaders: [
+    'Cross-Origin-Resource-Policy',
+    'Cross-Origin-Embedder-Policy',
+    'Cross-Origin-Opener-Policy'
+  ]
 };
 
 // Middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: { policy: "credentialless" },
+  crossOriginOpenerPolicy: { policy: "same-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.stripe.com", "https://maps.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https:", "https://res.cloudinary.com", "https://*.cloudinary.com"],
+      connectSrc: ["'self'", "http://localhost:5000", "http://localhost:*", "https://api.stripe.com", "https://maps.googleapis.com", "https://api.cloudinary.com", "https://*.cloudinary.com", "https://res.cloudinary.com", "wss://localhost:*"],
+      frameSrc: ["'self'", "https://js.stripe.com"],
+      mediaSrc: ["'self'", "https://res.cloudinary.com", "https://*.cloudinary.com", "blob:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  }
 }));
+
 app.use(cors(corsOptions));
-app.use(morgan('dev'));
 app.use(express.json());
+app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
+
+// Add security headers middleware
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 
 // PostgreSQL connection
 const pool = new Pool({
@@ -93,6 +137,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/concierge', conciergeRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/service-requests', conciergeRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

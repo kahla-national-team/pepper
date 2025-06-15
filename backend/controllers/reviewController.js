@@ -1,11 +1,12 @@
-const { appPool: pool } = require('../config/database');
+const { cloudinary } = require('../config/cloudinary');
+const NotificationService = require('../services/notificationService');
 
 const reviewController = {
   // Get all reviews for a specific user
   getUserReviews: async (req, res) => {
     try {
       const { userId } = req.params;
-      const result = await pool.query(
+      const result = await req.app.locals.pool.query(
         `SELECT r.*, u.full_name as user_name, u.profile_image as user_image
          FROM reviews r
          JOIN users u ON r.user_id = u.id
@@ -24,7 +25,7 @@ const reviewController = {
   getUserAverageRating: async (req, res) => {
     try {
       const { userId } = req.params;
-      const result = await pool.query(
+      const result = await req.app.locals.pool.query(
         `SELECT COALESCE(AVG(rating), 0) as average_rating
          FROM reviews
          WHERE user_id = $1`,
@@ -41,7 +42,7 @@ const reviewController = {
   getRentalReviews: async (req, res) => {
     try {
       const { rentalId } = req.params;
-      const result = await pool.query(
+      const result = await req.app.locals.pool.query(
         `SELECT r.*, u.full_name as user_name, u.profile_image as user_image
          FROM reviews r
          LEFT JOIN users u ON r.user_id = u.id
@@ -60,7 +61,7 @@ const reviewController = {
   getServiceReviews: async (req, res) => {
     try {
       const { serviceId } = req.params;
-      const result = await pool.query(
+      const result = await req.app.locals.pool.query(
         `SELECT r.*, u.full_name as user_name, u.profile_image as user_image
          FROM reviews r
          LEFT JOIN users u ON r.user_id = u.id
@@ -77,90 +78,70 @@ const reviewController = {
 
   // Create a new review
   createReview: async (req, res) => {
-    const client = await pool.connect();
+    const client = await req.app.locals.pool.connect();
     try {
-      console.log('Creating review with data:', req.body);
       await client.query('BEGIN');
-      const { rating, comment, item_id, item_type } = req.body;
-      
-      // Get user information from the authenticated request
-      const userId = req.user?.id;
 
-      // Handle both authenticated and anonymous reviews
-      let rentalId = null;
-      let serviceId = null;
+      const { rental_id, rating, comment } = req.body;
+      const user_id = req.user.id;
 
-      // Set the appropriate ID based on item type
-      if (item_type === 'rental') {
-        rentalId = item_id;
-      } else if (item_type === 'service') {
-        serviceId = item_id;
-      }
-
-      // Get user information if authenticated
-      let userInfo = null;
-      if (userId) {
-        const userResult = await client.query(
-          'SELECT full_name, email, profile_image FROM users WHERE id = $1',
-          [userId]
+      // Get rental details
+      const rentalResult = await client.query(
+        `SELECT r.*, u.full_name as owner_name, u.id as owner_id
+         FROM rentals r
+         JOIN users u ON r.owner_id = u.id
+         WHERE r.id = $1`,
+        [rental_id]
         );
-        if (userResult.rows.length > 0) {
-          userInfo = userResult.rows[0];
-        }
+
+      if (rentalResult.rows.length === 0) {
+        throw new Error('Rental not found');
       }
 
-      // Insert the review
-      const insertQuery = `
-        INSERT INTO reviews (
-          user_id, 
-          rental_id, 
-          service_id, 
-          rating, 
-          comment,
-          reviewer_name,
-          reviewer_email
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *`;
+      const rental = rentalResult.rows[0];
 
-      const result = await client.query(
-        insertQuery,
-        [
-          userId,
-          rentalId,
-          serviceId,
-          rating,
-          comment,
-          userInfo ? userInfo.full_name : req.body.reviewerName,
-          userInfo ? userInfo.email : req.body.reviewerEmail
-        ]
+      // Create review
+      const reviewResult = await client.query(
+        `INSERT INTO reviews (user_id, rental_id, rating, comment)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [user_id, rental_id, rating, comment]
       );
 
-      // Prepare the response data
-      let reviewData = result.rows[0];
-      if (userInfo) {
-        reviewData = {
-          ...reviewData,
-          user_name: userInfo.full_name,
-          user_image: userInfo.profile_image
-        };
-      }
+      const review = reviewResult.rows[0];
+
+      // Get user details for notification
+      const userResult = await client.query(
+        'SELECT full_name FROM users WHERE id = $1',
+        [user_id]
+      );
+      const user = userResult.rows[0];
+
+      // Create notification service instance
+      const notificationService = new NotificationService(req.app.locals.pool);
+
+      // Send notification
+      await notificationService.notifyNewReview({
+        ...review,
+        property_name: rental.title,
+        user_name: user.full_name,
+        owner_id: rental.owner_id
+      });
 
       await client.query('COMMIT');
-      console.log('Review created successfully:', reviewData);
-      res.json({ success: true, data: reviewData });
+
+      res.status(201).json({
+        success: true,
+        data: review,
+        message: 'Review created successfully'
+      });
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Error creating review:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        code: error.code
-      });
       res.status(500).json({ 
         success: false, 
-        message: error.message || 'Failed to create review',
-        details: error.stack
+        message: 'Error creating review',
+        error: error.message
       });
     } finally {
       client.release();
@@ -175,7 +156,7 @@ const reviewController = {
       const userId = req.user.id;
 
       // Check if the review belongs to the user
-      const checkResult = await pool.query(
+      const checkResult = await req.app.locals.pool.query(
         'SELECT * FROM reviews WHERE id = $1 AND user_id = $2',
         [reviewId, userId]
       );
@@ -184,7 +165,7 @@ const reviewController = {
         return res.status(403).json({ success: false, message: 'Not authorized to update this review' });
       }
 
-      const result = await pool.query(
+      const result = await req.app.locals.pool.query(
         `UPDATE reviews
          SET rating = $1, comment = $2, updated_at = NOW()
          WHERE id = $3 AND user_id = $4
@@ -206,7 +187,7 @@ const reviewController = {
       const userId = req.user.id;
 
       // Check if the review belongs to the user
-      const checkResult = await pool.query(
+      const checkResult = await req.app.locals.pool.query(
         'SELECT * FROM reviews WHERE id = $1 AND user_id = $2',
         [reviewId, userId]
       );
@@ -215,7 +196,7 @@ const reviewController = {
         return res.status(403).json({ success: false, message: 'Not authorized to delete this review' });
       }
 
-      await pool.query('DELETE FROM reviews WHERE id = $1', [reviewId]);
+      await req.app.locals.pool.query('DELETE FROM reviews WHERE id = $1', [reviewId]);
       res.json({ success: true, message: 'Review deleted successfully' });
     } catch (error) {
       console.error('Error deleting review:', error);
@@ -251,7 +232,7 @@ const reviewController = {
         params = [itemId];
       }
 
-      const result = await pool.query(query, params);
+      const result = await req.app.locals.pool.query(query, params);
       
       res.json({
         success: true,

@@ -1,10 +1,12 @@
 const { Pool } = require('pg');
+require('dotenv').config();
+
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'pepper',
-  password: 'postgres',
-  port: 5432,
+  user: process.env.PG_USER || 'postgres',
+  host: process.env.PG_HOST || 'localhost',
+  database: process.env.PG_DATABASE || 'butlerdb',
+  password: process.env.PG_PASSWORD || 'dembele',
+  port: process.env.PG_PORT || 5432,
 });
 
 async function updateBookingStatusEnum() {
@@ -21,12 +23,12 @@ async function updateBookingStatusEnum() {
 
     // Drop the existing enum type
     await client.query(`
-      DROP TYPE IF EXISTS booking_status CASCADE
+      DROP TYPE IF EXISTS booking_status_enum CASCADE
     `);
 
     // Create the new enum type with 'accepted' instead of 'confirmed'
     await client.query(`
-      CREATE TYPE booking_status AS ENUM (
+      CREATE TYPE booking_status_enum AS ENUM (
         'pending',
         'accepted',
         'rejected',
@@ -35,10 +37,11 @@ async function updateBookingStatusEnum() {
       )
     `);
 
-    // Add the column back with the new enum type
+    // Update the existing status column to use the new enum type
     await client.query(`
       ALTER TABLE bookings 
-      ADD COLUMN status booking_status NOT NULL DEFAULT 'pending'
+      ALTER COLUMN status TYPE booking_status_enum 
+      USING status::booking_status_enum;
     `);
 
     await client.query('COMMIT');

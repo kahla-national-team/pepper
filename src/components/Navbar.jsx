@@ -3,8 +3,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo-nav.svg';
 import Button from './Button';
 import ProfileSidebar from './Dashboard/ProfileSidebar';
-import { FaUser } from 'react-icons/fa';
+import { FaUser, FaBell } from 'react-icons/fa';
 import { useSearchMode } from '../context/SearchModeContext';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const Navbar = () => {
   const [user, setUser] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { activeMode, changeMode } = useSearchMode();
+  const { unreadCount } = useNotifications();
 
   // Check if we're on dashboard pages
   const isDashboardPage = location.pathname.includes('/dashboard') || 
@@ -73,7 +75,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-white text-black p-4 shadow-md">
+      <nav className="bg-white text-black p-4 shadow-md fixed top-0 left-0 right-0 z-10">
         <div className="container mx-auto flex justify-between items-center">
           {/* Logo */}
           <div className="flex-shrink-0">
@@ -126,6 +128,15 @@ const Navbar = () => {
           {/* User Section */}
           <div className="flex items-center space-x-4">
             {isLoggedIn ? (
+              <>
+                <Link to="/notifications" className="relative">
+                  <FaBell className="text-gray-700 hover:text-[#ff385c] text-xl transition-colors" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-[#ff385c] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
               <div className="relative">
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -144,9 +155,8 @@ const Navbar = () => {
                   )}
                   <span className="hidden md:block">{user?.name}</span>
                 </button>
-
-              
               </div>
+              </>
             ) : (
               <div className="flex items-center space-x-4">
                 <Link to="/login">

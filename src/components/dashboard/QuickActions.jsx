@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaPlus, FaCalendarAlt, FaChartLine, FaBell } from 'react-icons/fa';
+import { FaPlus, FaCalendarAlt, FaChartLine, FaBell, FaHome } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const QuickActions = () => {
@@ -27,6 +27,13 @@ const QuickActions = () => {
         >
           <FaPlus />
           <span>Add Property</span>
+        </button>
+        <button 
+          onClick={() => navigate('/dashboard/properties')}
+          className="w-full bg-[#ff385c] text-white py-3 px-4 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+        >
+          <FaHome />
+          <span>Your Rentals</span>
         </button>
         <button 
           onClick={handleBookingRequestsClick}

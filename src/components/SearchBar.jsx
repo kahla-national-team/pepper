@@ -24,18 +24,17 @@ const durationOptions = [
   { id: 'long', label: 'Long Term', icon: '🏠' }
 ];
 
-function SearchBar({ onSearch, onFilterChange, filters }) {
+function SearchBar({ onSearch, onFilterChange, filters = {} }) {
   const [isGuestOpen, setIsGuestOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSmall, setIsSmall] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const dropdownRef = useRef(null);
   const filterRef = useRef(null);
   const destinationRef = useRef(null);
-  const totalGuests = filters.guests.adults + filters.guests.children + filters.guests.babies;
+  const totalGuests = filters.guests?.adults + filters.guests?.children + filters.guests?.babies || 0;
 
   const amenities = [
     { id: 'wifi', label: 'WiFi', icon: '📶' },
@@ -117,9 +116,9 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
   };
 
   const toggleAmenity = (amenityId) => {
-    const newAmenities = filters.amenities.includes(amenityId)
+    const newAmenities = filters.amenities?.includes(amenityId)
       ? filters.amenities.filter(id => id !== amenityId)
-      : [...filters.amenities, amenityId];
+      : [...(filters.amenities || []), amenityId];
     
     onFilterChange({
       ...filters,
@@ -143,7 +142,6 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
 
   const handleSearchInput = (e) => {
     const value = e.target.value;
-    setSearchInput(value);
     onSearch(value);
   };
 
@@ -168,7 +166,6 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
       destination: value
     });
     
-    // Show suggestions if there's input
     if (value.trim()) {
       const filteredSuggestions = popularDestinations.filter(dest =>
         dest.name.toLowerCase().includes(value.toLowerCase())
@@ -201,11 +198,9 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
   );
 
   const handlePriceRangeChange = (min, max) => {
-    // Ensure min and max are valid numbers
     const minValue = parseInt(min) || 0;
     const maxValue = parseInt(max) || 1000;
     
-    // Ensure min doesn't exceed max
     if (minValue > maxValue) {
       onFilterChange({
         ...filters,
@@ -226,10 +221,9 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
   };
 
   const toggleDuration = (durationId) => {
-    const newDuration = filters.duration === durationId ? null : durationId;
     onFilterChange({
       ...filters,
-      duration: newDuration
+      duration: filters.duration === durationId ? null : durationId
     });
   };
 
@@ -241,7 +235,7 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
           <input 
             type="text" 
             placeholder="Search destinations" 
-            value={filters.destination}
+            value={filters.destination || ''}
             onChange={handleDestinationChange}
             onKeyPress={(e) => {
               if (e.key === 'Enter') {
@@ -250,7 +244,7 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
               }
             }}
             onFocus={() => {
-              if (filters.destination.trim()) {
+              if (filters.destination?.trim()) {
                 setShowSuggestions(true);
               }
             }}
@@ -279,7 +273,7 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
           <input 
             type="date" 
             min={new Date().toISOString().split('T')[0]}
-            value={filters.dates.checkIn || ''}
+            value={filters.dates?.checkIn || ''}
             onChange={(e) => handleDateChange('checkIn', e.target.value)}
           />
         </div>
@@ -289,8 +283,8 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
           <label>Check out</label>
           <input 
             type="date" 
-            min={filters.dates.checkIn || new Date().toISOString().split('T')[0]}
-            value={filters.dates.checkOut || ''}
+            min={filters.dates?.checkIn || new Date().toISOString().split('T')[0]}
+            value={filters.dates?.checkOut || ''}
             onChange={(e) => handleDateChange('checkOut', e.target.value)}
           />
         </div>
@@ -318,7 +312,7 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
                     <input
                       type="number"
                       min="0"
-                      value={filters.guests[type]}
+                      value={filters.guests?.[type] || 0}
                       onChange={(e) => handleGuestCount(e, type, 'input')}
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -334,7 +328,7 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
           className="search-button"
           onClick={handleSearchButtonClick}
         >
-            <img src={SearchIcon} alt="Search" className="search-icon" />
+          <img src={SearchIcon} alt="Search" className="search-icon" />
         </button>
       </div>
       
@@ -343,9 +337,9 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
           className="filter-button"
           onClick={() => setIsFilterOpen(!isFilterOpen)}
         >
-        <img src={vector3} alt="Filter" className="filter-icon" />
-        <span>Filters</span>
-      </button>
+          <img src={vector3} alt="Filter" className="filter-icon" />
+          <span>Filters</span>
+        </button>
         
         {isFilterOpen && (
           <div className="filter-dropdown">
@@ -366,21 +360,6 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
             </div>
 
             <div className="filter-section">
-              <h3>Room Type</h3>
-              <div className="filter-options">
-                {['any', 'room', 'entire home', 'bed only'].map(type => (
-                  <button
-                    key={type}
-                    className={`filter-option ${filters.roomType === type ? 'active' : ''}`}
-                    onClick={() => handleFilterChange('roomType', type)}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="filter-section">
               <h3>Price Range</h3>
               <div className="price-range-slider">
                 <div className="price-inputs">
@@ -388,10 +367,10 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
                     <label>Min</label>
                     <input
                       type="number"
-                      value={filters.priceRange.min}
-                      onChange={(e) => handlePriceRangeChange(e.target.value, filters.priceRange.max)}
+                      value={filters.priceRange?.min || 0}
+                      onChange={(e) => handlePriceRangeChange(e.target.value, filters.priceRange?.max || 1000)}
                       min="0"
-                      max={filters.priceRange.max}
+                      max={filters.priceRange?.max || 1000}
                       placeholder="0"
                     />
                   </div>
@@ -399,111 +378,12 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
                     <label>Max</label>
                     <input
                       type="number"
-                      value={filters.priceRange.max}
-                      onChange={(e) => handlePriceRangeChange(filters.priceRange.min, e.target.value)}
-                      min={filters.priceRange.min}
+                      value={filters.priceRange?.max || 1000}
+                      onChange={(e) => handlePriceRangeChange(filters.priceRange?.min || 0, e.target.value)}
+                      min={filters.priceRange?.min || 0}
                       max="1000"
                       placeholder="1000"
                     />
-                  </div>
-                </div>
-                <div className="range-slider">
-                  <div className="range-track">
-                    <input
-                      type="range"
-                      min="0"
-                      max="1000"
-                      value={filters.priceRange.min}
-                      onChange={(e) => handlePriceRangeChange(e.target.value, filters.priceRange.max)}
-                      className="range-input min"
-                    />
-                    <input
-                      type="range"
-                      min="0"
-                      max="1000"
-                      value={filters.priceRange.max}
-                      onChange={(e) => handlePriceRangeChange(filters.priceRange.min, e.target.value)}
-                      className="range-input max"
-                    />
-                    <div 
-                      className="range-progress"
-                      style={{
-                        left: `${(filters.priceRange.min / 1000) * 100}%`,
-                        width: `${((filters.priceRange.max - filters.priceRange.min) / 1000) * 100}%`
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="filter-section">
-              <h3>Rooms and Beds</h3>
-              <div className="rooms-beds">
-                <div className="room-type">
-                  <label>Bedrooms</label>
-                  <div className="counter-controls">
-                    <button 
-                      onClick={() => handleFilterChange('bedrooms', Math.max(0, filters.bedrooms - 1))}
-                      disabled={filters.bedrooms <= 0}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={filters.bedrooms}
-                      onChange={(e) => handleFilterChange('bedrooms', Math.max(0, parseInt(e.target.value) || 0))}
-                    />
-                    <button 
-                      onClick={() => handleFilterChange('bedrooms', filters.bedrooms + 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="room-type">
-                  <label>Beds</label>
-                  <div className="counter-controls">
-                    <button 
-                      onClick={() => handleFilterChange('beds', Math.max(0, filters.beds - 1))}
-                      disabled={filters.beds <= 0}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={filters.beds}
-                      onChange={(e) => handleFilterChange('beds', Math.max(0, parseInt(e.target.value) || 0))}
-                    />
-                    <button 
-                      onClick={() => handleFilterChange('beds', filters.beds + 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="room-type">
-                  <label>Bathrooms</label>
-                  <div className="counter-controls">
-                    <button 
-                      onClick={() => handleFilterChange('bathrooms', Math.max(0, filters.bathrooms - 1))}
-                      disabled={filters.bathrooms <= 0}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={filters.bathrooms}
-                      onChange={(e) => handleFilterChange('bathrooms', Math.max(0, parseInt(e.target.value) || 0))}
-                    />
-                    <button 
-                      onClick={() => handleFilterChange('bathrooms', filters.bathrooms + 1)}
-                    >
-                      +
-                    </button>
                   </div>
                 </div>
               </div>
@@ -535,7 +415,7 @@ function SearchBar({ onSearch, onFilterChange, filters }) {
                 {amenities.map(amenity => (
                   <button
                     key={amenity.id}
-                    className={`amenity-button ${filters.amenities.includes(amenity.id) ? 'active' : ''}`}
+                    className={`amenity-button ${filters.amenities?.includes(amenity.id) ? 'active' : ''}`}
                     onClick={() => toggleAmenity(amenity.id)}
                   >
                     <span className="amenity-icon">{amenity.icon}</span>

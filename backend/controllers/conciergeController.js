@@ -1,4 +1,3 @@
-const { appPool } = require('../config/database');
 const { cloudinary } = require('../config/cloudinary');
 
 const conciergeController = {
@@ -9,7 +8,7 @@ const conciergeController = {
     const photo_url = req.file ? req.file.path : null;
 
     try {
-      const result = await appPool.query(
+      const result = await req.app.locals.pool.query(
         `INSERT INTO concierge_services 
         (owner_id, name, category, description, price, duration_minutes, photo_url) 
         VALUES ($1, $2, $3, $4, $5, $6, $7) 
@@ -46,7 +45,7 @@ const conciergeController = {
     const owner_id = req.user.id;
 
     try {
-      const result = await appPool.query(
+      const result = await req.app.locals.pool.query(
         'SELECT * FROM concierge_services WHERE owner_id = $1 ORDER BY created_at DESC',
         [owner_id]
       );
@@ -74,7 +73,7 @@ const conciergeController = {
 
     try {
       // First check if the service belongs to the owner
-      const checkResult = await appPool.query(
+      const checkResult = await req.app.locals.pool.query(
         'SELECT * FROM concierge_services WHERE id = $1 AND owner_id = $2',
         [id, owner_id]
       );
@@ -147,7 +146,7 @@ const conciergeController = {
         RETURNING *
       `;
 
-      const result = await appPool.query(query, values);
+      const result = await req.app.locals.pool.query(query, values);
 
       res.status(200).json({
         success: true,
@@ -180,7 +179,7 @@ const conciergeController = {
 
     try {
       // First get the service to check ownership and get photo_url
-      const checkResult = await appPool.query(
+      const checkResult = await req.app.locals.pool.query(
         'SELECT * FROM concierge_services WHERE id = $1 AND owner_id = $2',
         [id, owner_id]
       );
@@ -202,7 +201,7 @@ const conciergeController = {
         }
       }
 
-      const result = await appPool.query(
+      const result = await req.app.locals.pool.query(
         'DELETE FROM concierge_services WHERE id = $1 AND owner_id = $2 RETURNING *',
         [id, owner_id]
       );
@@ -227,7 +226,7 @@ const conciergeController = {
     console.log('Getting services for user:', userId);
 
     try {
-      const result = await appPool.query(
+      const result = await req.app.locals.pool.query(
         `SELECT 
           cs.*,
           u.username as provider_name,
@@ -273,7 +272,7 @@ const conciergeController = {
   // Get all active concierge services
   getAllServices: async (req, res) => {
     try {
-      const result = await appPool.query(
+      const result = await req.app.locals.pool.query(
         `SELECT 
           cs.*,
           u.username as provider_name,
@@ -322,7 +321,7 @@ const conciergeController = {
     console.log('Getting detailed service info for ID:', id);
 
     try {
-      const result = await appPool.query(
+      const result = await req.app.locals.pool.query(
         `SELECT 
           cs.*,
           u.username as provider_name,
@@ -416,7 +415,7 @@ const conciergeController = {
     const { id } = req.params;
 
     try {
-      const result = await appPool.query(
+      const result = await req.app.locals.pool.query(
         'SELECT * FROM concierge_services WHERE owner_id = $1 AND is_active = true ORDER BY created_at DESC',
         [id]
       );

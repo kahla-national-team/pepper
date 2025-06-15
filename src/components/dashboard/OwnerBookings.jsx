@@ -32,14 +32,14 @@ const OwnerBookings = () => {
 
   const handleAcceptBooking = async (bookingId) => {
     try {
-      // Update booking status to confirmed
+      // Update booking status to accepted
       const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ status: 'confirmed' })
+        body: JSON.stringify({ status: 'accepted' })
       });
 
       if (response.ok) {
@@ -59,14 +59,14 @@ const OwnerBookings = () => {
 
   const handleRejectBooking = async (bookingId) => {
     try {
-      // Update booking status to cancelled
+      // Update booking status to rejected
       const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ status: 'cancelled' })
+        body: JSON.stringify({ status: 'rejected' })
       });
 
       if (response.ok) {
@@ -86,10 +86,11 @@ const OwnerBookings = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed':
+      case 'accepted':
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       case 'completed':
@@ -108,7 +109,7 @@ const OwnerBookings = () => {
   };
 
   const upcomingBookings = bookings.filter(booking => 
-    booking.status === 'pending' || booking.status === 'confirmed'
+    booking.status === 'pending' || booking.status === 'accepted'
   );
 
   const pastBookings = bookings.filter(booking => 

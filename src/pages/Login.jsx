@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FormInput from '../components/FormInput';
 import Button from '../components/Button';
 import photo from '../assets/photo-sign.svg';
@@ -8,6 +8,7 @@ import { authService } from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
@@ -59,7 +60,9 @@ const Login = () => {
         console.log('Submitting login form with:', { identifier: formData.identifier });
         const response = await authService.login(formData.identifier, formData.password);
         console.log('Login successful:', response);
-        navigate('/dashboard');
+        // Redirect to the stored location or dashboard if no stored location
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
       } catch (error) {
         console.error('Login error in component:', error);
         setServerError(error.message || 'An error occurred during login');

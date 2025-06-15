@@ -1,8 +1,6 @@
-const { appPool } = require('../config/database');
-
 const favoriteModel = {
   // Create favorites table
-  createTable: async () => {
+  createTable: async (pool) => {
     const query = `
       CREATE TABLE IF NOT EXISTS favorites (
         id SERIAL PRIMARY KEY,
@@ -15,7 +13,7 @@ const favoriteModel = {
       )
     `;
     try {
-      await appPool.query(query);
+      await pool.query(query);
       console.log('Favorites table created or already exists');
     } catch (error) {
       console.error('Error creating favorites table:', error);
@@ -24,10 +22,10 @@ const favoriteModel = {
   },
 
   // Add an item to favorites
-  addFavorite: async (userId, itemId, itemType) => {
+  addFavorite: async (pool, userId, itemId, itemType) => {
     const query = 'INSERT INTO favorites (user_id, item_id, item_type) VALUES ($1, $2, $3) RETURNING id';
     try {
-      const result = await appPool.query(query, [userId, itemId, itemType]);
+      const result = await pool.query(query, [userId, itemId, itemType]);
       return result.rows[0].id;
     } catch (error) {
       console.error('Error adding favorite:', error);
@@ -36,10 +34,10 @@ const favoriteModel = {
   },
 
   // Remove a favorite by its ID and user ID
-  removeFavoriteById: async (favoriteId, userId) => {
+  removeFavoriteById: async (pool, favoriteId, userId) => {
     const query = 'DELETE FROM favorites WHERE id = $1 AND user_id = $2';
     try {
-      const result = await appPool.query(query, [favoriteId, userId]);
+      const result = await pool.query(query, [favoriteId, userId]);
       return result.rowCount > 0;
     } catch (error) {
       console.error('Error removing favorite by ID:', error);
@@ -48,10 +46,10 @@ const favoriteModel = {
   },
 
   // Remove an item from favorites
-  removeFavorite: async (userId, itemId, itemType) => {
+  removeFavorite: async (pool, userId, itemId, itemType) => {
     const query = 'DELETE FROM favorites WHERE user_id = $1 AND item_id = $2 AND item_type = $3';
     try {
-      const result = await appPool.query(query, [userId, itemId, itemType]);
+      const result = await pool.query(query, [userId, itemId, itemType]);
       return result.rowCount > 0;
     } catch (error) {
       console.error('Error removing favorite:', error);
@@ -60,7 +58,7 @@ const favoriteModel = {
   },
 
   // Get all favorites for a user
-  getFavorites: async (userId) => {
+  getFavorites: async (pool, userId) => {
     const query = `
       SELECT 
         f.*,
@@ -94,7 +92,7 @@ const favoriteModel = {
       ORDER BY f.created_at DESC
     `;
     try {
-      const result = await appPool.query(query, [userId]);
+      const result = await pool.query(query, [userId]);
       return result.rows;
     } catch (error) {
       console.error('Error getting favorites:', error);
@@ -103,10 +101,10 @@ const favoriteModel = {
   },
 
   // Check if an item is in favorites
-  isFavorite: async (userId, itemId, itemType) => {
+  isFavorite: async (pool, userId, itemId, itemType) => {
     const query = 'SELECT id FROM favorites WHERE user_id = $1 AND item_id = $2 AND item_type = $3';
     try {
-      const result = await appPool.query(query, [userId, itemId, itemType]);
+      const result = await pool.query(query, [userId, itemId, itemType]);
       return result.rows.length > 0;
     } catch (error) {
       console.error('Error checking favorite status:', error);

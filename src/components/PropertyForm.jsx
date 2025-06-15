@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import FormInput from './FormInput';
 import Button from './Button';
 import { FaHome, FaBed, FaBath, FaUsers, FaMapMarkerAlt } from 'react-icons/fa';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { propertyService } from '../services/propertyService';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
-const PropertyForm = () => {
+const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = location.pathname.includes('/admin');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -24,12 +28,15 @@ const PropertyForm = () => {
     latitude: '',
     longitude: '',
     renting_term: 'night_term',
-    image: ''
+    image: null,
+    ...initialData
   });
 
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState(initialData.image || null);
+  const fileInputRef = useRef(null);
 
   const [mapCenter, setMapCenter] = useState({
     lat: 0,
@@ -37,8 +44,6 @@ const PropertyForm = () => {
   });
 
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const fileInputRef = useRef(null);
 
   const roomTypes = [
     'Entire place',
@@ -147,7 +152,7 @@ const PropertyForm = () => {
     if (file) {
       // Create a preview URL for the selected image
       const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
+      setPreviewUrl(previewUrl);
       
       // Create FormData for file upload
       const formData = new FormData();
@@ -164,8 +169,16 @@ const PropertyForm = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.title) {
+    if (!formData.title?.trim()) {
       newErrors.title = 'Title is required';
+    }
+    
+    if (!formData.description?.trim()) {
+      newErrors.description = 'Description is required';
+    }
+    
+    if (!formData.price || isNaN(formData.price) || formData.price <= 0) {
+      newErrors.price = 'Valid price is required';
     }
     
     if (!formData.address) {
@@ -176,14 +189,29 @@ const PropertyForm = () => {
       newErrors.city = 'City is required';
     }
     
-    if (!formData.price) {
-      newErrors.price = 'Price is required';
-    } else if (isNaN(formData.price) || formData.price <= 0) {
-      newErrors.price = 'Price must be a positive number';
-    }
-    
     if (!formData.room_type) {
       newErrors.room_type = 'Room type is required';
+    }
+    
+    if (!formData.bedrooms || isNaN(formData.bedrooms) || formData.bedrooms < 0) {
+      newErrors.bedrooms = 'Valid number of bedrooms is required';
+    }
+    
+    if (!formData.bathrooms || isNaN(formData.bathrooms) || formData.bathrooms < 0) {
+      newErrors.bathrooms = 'Valid number of bathrooms is required';
+    }
+    
+    if (!formData.max_guests || isNaN(formData.max_guests) || formData.max_guests < 1) {
+      newErrors.max_guests = 'Valid number of guests is required';
+    }
+    
+    if (!formData.renting_term) {
+      newErrors.renting_term = 'Renting term is required';
+    }
+
+    // Only validate image for new properties
+    if (!isEditing && !formData.image && !previewUrl) {
+      newErrors.image = 'Image is required';
     }
     
     setErrors(newErrors);
@@ -194,38 +222,47 @@ const PropertyForm = () => {
     e.preventDefault();
     setServerError('');
     
-    if (validateForm()) {
-      setIsLoading(true);
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
       try {
-        let dataToSend;
-        
-        if (formData.image instanceof FormData) {
-          // If we have an image, use the FormData and append other fields
-          dataToSend = formData.image;
-          // Append all other form fields to the FormData
-          Object.keys(formData).forEach(key => {
-            if (key !== 'image') {
-              if (key === 'amenities') {
-                dataToSend.append(key, JSON.stringify(formData[key]));
+      // Convert numeric fields to numbers
+      const dataToSubmit = {
+        ...formData,
+        price: Number(formData.price),
+        bedrooms: Number(formData.bedrooms),
+        bathrooms: Number(formData.bathrooms),
+        max_guests: Number(formData.max_guests),
+        renting_term: formData.renting_term,
+        latitude: Number(formData.latitude),
+        longitude: Number(formData.longitude)
+      };
+
+      console.log('Submitting property data:', {
+        ...dataToSubmit,
+        image: dataToSubmit.image ? 'Image present' : 'No image'
+      });
+
+      if (onSubmit) {
+        // If onSubmit prop is provided, use it
+        await onSubmit(dataToSubmit);
               } else {
-                dataToSend.append(key, formData[key]);
-              }
-            }
-          });
+        // Otherwise handle submission internally
+        if (isEditing) {
+          await propertyService.updateProperty(initialData.id, dataToSubmit);
         } else {
-          // If no image, send regular JSON data
-          dataToSend = { ...formData };
+          await propertyService.createProperty(dataToSubmit);
         }
-        
-        const response = await propertyService.createProperty(dataToSend);
-        console.log('Property created successfully:', response);
-        navigate('/dashboard');
+        // Navigate based on whether it's admin or user
+        navigate(isAdmin ? '/admin-dashboard' : '/dashboard');
+      }
       } catch (error) {
         console.error('Property submission error:', error);
-        setServerError(error.message || 'An error occurred while saving the property');
+      setServerError(error.message || 'Failed to submit property. Please try again.');
       } finally {
-        setIsLoading(false);
-      }
+      setIsSubmitting(false);
     }
   };
 
@@ -242,7 +279,9 @@ const PropertyForm = () => {
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <div className="flex items-center justify-center mb-8">
             <FaHome className="text-[#ff385c] text-4xl mr-3" />
-            <h2 className="text-3xl font-bold text-gray-900">Add New Property</h2>
+            <h2 className="text-3xl font-bold text-gray-900">
+              {isAdmin ? 'Add New Property' : 'Add Your Property'}
+            </h2>
           </div>
 
           {serverError && (
@@ -252,6 +291,12 @@ const PropertyForm = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+                {errors.submit}
+              </div>
+            )}
+
             {/* Basic Information */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-xl font-semibold mb-4">Basic Information</h3>
@@ -484,9 +529,9 @@ const PropertyForm = () => {
                     htmlFor="image-upload"
                     className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
                   >
-                    {imagePreview ? (
+                    {previewUrl ? (
                       <img
-                        src={imagePreview}
+                        src={previewUrl}
                         alt="Property preview"
                         className="w-full h-full object-cover rounded-lg"
                       />
@@ -523,13 +568,13 @@ const PropertyForm = () => {
                     />
                   </label>
                 </div>
-                {imagePreview && (
+                {previewUrl && (
                   <div className="flex justify-center">
                     <button
                       type="button"
                       onClick={() => {
-                        setImagePreview(null);
-                        setFormData(prev => ({ ...prev, image: '' }));
+                        setPreviewUrl(null);
+                        setFormData(prev => ({ ...prev, image: null }));
                         if (fileInputRef.current) {
                           fileInputRef.current.value = '';
                         }
@@ -546,17 +591,17 @@ const PropertyForm = () => {
             <div className="flex justify-end space-x-4">
               <Button
                 type="button"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(isAdmin ? '/admin-dashboard' : '/dashboard')}
                 className="bg-gray-500 hover:bg-gray-600"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="bg-[#ff385c] hover:bg-[#ff385c]/90"
               >
-                {isLoading ? 'Saving...' : 'Save Property'}
+                {isSubmitting ? 'Saving...' : 'Save Property'}
               </Button>
             </div>
           </form>
