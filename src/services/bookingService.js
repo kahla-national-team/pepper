@@ -1,39 +1,31 @@
-import api from './api';
+import axios from 'axios';
 
-export const bookingService = {
-  // Create a new booking
-  createBooking: async (bookingData) => {
-    try {
-      console.log('bookingService - sending data:', bookingData);
-      const response = await api.post('/bookings', bookingData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      console.error('Error response:', error.response?.data);
-      
-      // Return a more specific error message
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      } else if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
-      } else {
-        throw new Error('Failed to create booking. Please try again.');
-      }
-    }
+const API_URL = 'http://localhost:5000/api';
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
   },
+});
 
-  // Get booking details by ID
-  getBooking: async (id) => {
-    try {
-      const response = await api.get(`/bookings/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching booking:', error);
-      throw error;
+// Add request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
   },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-  // Get all bookings for the current user
+// Create the service object
+const bookingService = {
   getUserBookings: async () => {
     try {
       const response = await api.get('/bookings/user');
@@ -44,7 +36,26 @@ export const bookingService = {
     }
   },
 
-  // Cancel a booking
+  createBooking: async (bookingData) => {
+    try {
+      const response = await api.post('/bookings', bookingData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      throw error;
+    }
+  },
+
+  getBooking: async (id) => {
+    try {
+      const response = await api.get(`/bookings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching booking:', error);
+      throw error;
+    }
+  },
+
   cancelBooking: async (id) => {
     try {
       const response = await api.post(`/bookings/${id}/cancel`);
@@ -55,7 +66,6 @@ export const bookingService = {
     }
   },
 
-  // Check availability for a date range
   checkAvailability: async (rentalId, startDate, endDate) => {
     try {
       const response = await api.get('/bookings/check-availability', {
@@ -72,7 +82,6 @@ export const bookingService = {
     }
   },
 
-  // Get bookings for properties owned by the current user
   getBookingsForOwner: async () => {
     try {
       const response = await api.get('/bookings/owner');
@@ -81,5 +90,22 @@ export const bookingService = {
       console.error('Error fetching owner bookings:', error);
       throw error;
     }
-  }
-}; 
+  },
+
+  getOwnerBookings: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/bookings/owner`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching owner bookings:', error);
+      throw error;
+    }
+  },
+};
+
+export default bookingService; 

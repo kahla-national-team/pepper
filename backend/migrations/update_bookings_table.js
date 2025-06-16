@@ -1,8 +1,18 @@
-const { appPool } = require('../config/database');
+const { Pool } = require('pg');
+const pool = new Pool({
+  user: 'postgres',
+  host: 'localhost',
+  database: 'butler',
+  password: 'dembele',
+  port: 5432,
+});
 
 async function updateBookingsTable(db) {
   try {
     console.log('Checking and updating bookings table...');
+    
+    // Use the pool instead of db parameter since it's not being passed correctly
+    const db = pool;
     
     // List of columns that should exist in the bookings table
     const requiredColumns = [
@@ -81,7 +91,7 @@ async function updateBookingsTable(db) {
 
 // Run the migration if this file is executed directly
 if (require.main === module) {
-  updateBookingsTable()
+  updateBookingsTable(pool)
     .then(() => {
       console.log('Migration completed successfully');
       process.exit(0);

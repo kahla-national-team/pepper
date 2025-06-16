@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaUser, FaCreditCard, FaEye, FaTimes } from 'react-icons/fa';
-import { bookingService } from '../services/bookingService';
-import { useAuth } from '../context/AuthContext';
+import { getUserBookings } from '../services/bookingService';
+import { useAuth } from '../contexts/AuthContext';
 
 const Bookings = () => {
   const navigate = useNavigate();
@@ -14,16 +14,20 @@ const Bookings = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const data = await bookingService.getUserBookings();
+        setLoading(true);
+        const data = await getUserBookings();
         setBookings(data);
+        setError(null);
       } catch (err) {
-        // handle error
+        setError('Failed to fetch bookings. Please try again later.');
+        console.error('Error fetching bookings:', err);
       } finally {
         setLoading(false);
       }
     };
-    if (user) fetchBookings();
-  }, [user]);
+
+    fetchBookings();
+  }, []);
 
   const handleCancelBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to cancel this booking?')) {

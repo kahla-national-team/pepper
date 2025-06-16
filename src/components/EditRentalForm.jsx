@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import FormInput from './FormInput';
 import Button from './Button';
 import { FaHome, FaBed, FaBath, FaUsers, FaMapMarkerAlt } from 'react-icons/fa';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import { propertyService } from '../services/propertyService';
 import axios from 'axios';
 
@@ -251,11 +251,23 @@ const EditRentalForm = () => {
     }
   };
 
-  const mapContainerStyle = {
+  const containerStyle = {
     width: '100%',
     height: '400px',
     borderRadius: '0.75rem',
     marginBottom: '1rem'
+  };
+
+  const onLoad = (map) => {
+    // This function is called when the map is fully loaded
+  };
+
+  const onUnmount = () => {
+    // This function is called when the map is unmounted
+  };
+
+  const onMapClick = (event) => {
+    // This function is called when the map is clicked
   };
 
   if (isLoading && !formData.title) {
@@ -360,11 +372,13 @@ const EditRentalForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Property Location
               </label>
-              <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+              <div className="w-full h-[400px] rounded-lg overflow-hidden">
                 <GoogleMap
-                  mapContainerStyle={mapContainerStyle}
+                  mapContainerStyle={containerStyle}
                   center={mapCenter}
-                  zoom={13}
+                  zoom={15}
+                  onLoad={onLoad}
+                  onUnmount={onUnmount}
                   onClick={handleMapClick}
                 >
                   {selectedLocation && (
@@ -384,7 +398,7 @@ const EditRentalForm = () => {
                     />
                   )}
                 </GoogleMap>
-              </LoadScript>
+              </div>
               <div className="mt-2 text-sm text-gray-500">
                 Click on the map to select your property location
               </div>

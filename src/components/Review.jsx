@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaStar, FaUser, FaPen } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { reviewService } from '../services/reviewService';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => {
   const { user } = useAuth();

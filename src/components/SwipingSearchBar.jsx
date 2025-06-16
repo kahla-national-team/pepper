@@ -200,11 +200,13 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
       newGuests[type] = operation === 'add' ? newGuests[type] + 1 : Math.max(0, newGuests[type] - 1);
     }
 
+    setCurrentFilters(prev => ({
+      ...prev,
+      guests: newGuests
+    }));
+
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        guests: newGuests
-      });
+      onFilterChange('guests', newGuests);
     }
   };
 
@@ -496,9 +498,13 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                           >
                             -
                           </button>
-                          <span className="w-8 text-center text-sm font-medium">
-                            {currentFilters.guests[type]}
-                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={currentFilters.guests[type] || 0}
+                            onChange={(e) => handleGuestCount(e, type, 'input')}
+                            className="w-12 text-center border rounded"
+                          />
                           <button 
                             onClick={(e) => handleGuestCount(e, type, 'add')}
                             className="w-8 h-8 border border-gray-300 bg-white rounded-full flex items-center justify-center text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-all duration-200 text-lg font-medium"

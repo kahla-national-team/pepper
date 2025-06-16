@@ -1,13 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { authService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  const location = useLocation();
+  console.log('ProtectedRoute rendering');
+  const auth = useAuth();
+  console.log('Auth context in ProtectedRoute:', auth);
 
-  if (!isAuthenticated) {
-    // Store the attempted URL and redirect to login
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!auth) {
+    console.log('No auth context found');
+    return <Navigate to="/login" />;
   }
 
   return children;

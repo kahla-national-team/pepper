@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaCalendarAlt, FaUser, FaHome, FaCheckCircle, FaTimes, FaEye, FaBell } from 'react-icons/fa';
 import { bookingService } from '../services/bookingService';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const BookingRequests = () => {
+  console.log('BookingRequests component rendering');
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const auth = useAuth();
+  console.log('Auth context in BookingRequests:', auth);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,10 +29,10 @@ const BookingRequests = () => {
       }
     };
 
-    if (user) {
+    if (auth) {
       fetchOwnerBookings();
     }
-  }, [user]);
+  }, [auth]);
 
   const handleAcceptBooking = async (bookingId) => {
     try {

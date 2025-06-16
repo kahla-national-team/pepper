@@ -69,5 +69,15 @@ export const rentalService = {
       console.error('Get rentals by user error:', error);
       throw error.response?.data || { message: 'An error occurred while fetching user rentals' };
     }
+  },
+
+  getRentalLocations: async () => {
+    try {
+      const response = await api.get('/rentals/locations');
+      return response.data;
+    } catch (error) {
+      console.error('Get rental locations error:', error);
+      throw error.response?.data || { message: 'An error occurred while fetching rental locations' };
+    }
   }
 }; 

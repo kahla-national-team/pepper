@@ -1,53 +1,54 @@
 "use client"
-import { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { FaMapMarkerAlt } from 'react-icons/fa';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 
 const RentalLocationMap = ({ location, address, title }) => {
-  const [infoWindowOpen, setInfoWindowOpen] = useState(false);
-
-  // Check if location data is available
-  if (!location || !location.lat || !location.lng) {
-    return (
-      <div className="bg-gray-100 rounded-lg p-8 text-center">
-        <FaMapMarkerAlt className="text-gray-400 text-4xl mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Location</h3>
-        <p className="text-gray-600 mb-4">{address || 'Location not available'}</p>
-        <p className="text-sm text-gray-500">Location coordinates not available</p>
-      </div>
-    );
-  }
+  const [showInfoWindow, setShowInfoWindow] = useState(false);
 
   const mapContainerStyle = {
     width: '100%',
-    height: '320px'
+    height: '400px',
+    borderRadius: '0.75rem',
+    marginBottom: '1rem'
   };
 
-  const mapOptions = {
-    disableDefaultUI: false,
-    zoomControl: true,
-    mapTypeControl: false,
-    scaleControl: true,
-    streetViewControl: false,
-    rotateControl: false,
-    fullscreenControl: false,
-    styles: [
-      {
-        featureType: "poi",
-        elementType: "labels",
-        stylers: [{ visibility: "off" }]
-      }
-    ]
+  // Handle both string and number coordinates
+  const center = {
+    lat: typeof location?.lat === 'string' ? parseFloat(location.lat) : location?.lat || 0,
+    lng: typeof location?.lng === 'string' ? parseFloat(location.lng) : location?.lng || 0
   };
 
-  const handleMarkerClick = () => {
-    setInfoWindowOpen(true);
-  };
+  const onLoad = useCallback((map) => {
+    if (center.lat === 0 && center.lng === 0) {
+      console.warn('Invalid coordinates provided to RentalLocationMap');
+    }
+  }, [center]);
 
-  const handleInfoWindowClose = () => {
-    setInfoWindowOpen(false);
-  };
+  const onUnmount = useCallback(() => {
+    // Cleanup if needed
+  }, []);
+
+  // Don't render the map if we don't have valid coordinates
+  if (center.lat === 0 && center.lng === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <FaMapMarkerAlt className="text-[#ff385c] mr-2" />
+            Location
+          </h3>
+          {address && (
+            <p className="text-gray-600 text-sm mt-1">{address}</p>
+          )}
+        </div>
+        <div className="p-4 text-center text-gray-500">
+          Location information not available
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -60,41 +61,40 @@ const RentalLocationMap = ({ location, address, title }) => {
           <p className="text-gray-600 text-sm mt-1">{address}</p>
         )}
       </div>
-      <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+      <div className="w-full h-[400px]">
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
-          center={location}
+          center={center}
           zoom={15}
-          options={mapOptions}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
         >
           <Marker
-            position={location}
-            title={title || 'Property Location'}
-            onClick={handleMarkerClick}
-            animation={google.maps.Animation.DROP}
+            position={center}
+            onClick={() => setShowInfoWindow(true)}
           />
-          {infoWindowOpen && (
+          {showInfoWindow && (
             <InfoWindow
-              position={location}
-              onCloseClick={handleInfoWindowClose}
+              position={center}
+              onCloseClick={() => setShowInfoWindow(false)}
             >
-              <div className="p-2 max-w-xs">
-                <h3 className="font-semibold text-lg mb-1">{title || 'Property Location'}</h3>
-                <p className="text-gray-600 text-sm">{address || 'Location'}</p>
+              <div>
+                <h3 className="font-semibold">{title}</h3>
+                <p className="text-sm text-gray-600">{address}</p>
               </div>
             </InfoWindow>
           )}
         </GoogleMap>
-      </LoadScript>
+      </div>
     </div>
   );
 };
 
 RentalLocationMap.propTypes = {
   location: PropTypes.shape({
-    lat: PropTypes.number.isRequired,
-    lng: PropTypes.number.isRequired
-  }),
+    lat: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    lng: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+  }).isRequired,
   address: PropTypes.string,
   title: PropTypes.string
 };

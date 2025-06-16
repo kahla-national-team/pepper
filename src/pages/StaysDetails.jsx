@@ -5,7 +5,7 @@ import { FaArrowLeft, FaStar, FaBed, FaBath, FaUsers, FaMapMarkerAlt, FaCalendar
 import { rentalService } from '../services/rentalService';
 import { reviewService } from '../services/reviewService';
 import Review from '../components/Review';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import BookingForm from '../components/BookingForm';
 import RentalLocationMap from '../components/RentalLocationMap';
 

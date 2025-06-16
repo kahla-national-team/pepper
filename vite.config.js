@@ -37,4 +37,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
   },
+  define: {
+    'process.env': {
+      VITE_GOOGLE_MAPS_API_KEY: JSON.stringify('AIzaSyB1sD5MQKu-bQhgQWmTOzwjVCvPRMdpyMI')
+    }
+  }
 })

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FormInput from './FormInput';
 import Button from './Button';
 import { FaHome, FaBed, FaBath, FaUsers, FaMapMarkerAlt } from 'react-icons/fa';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import { propertyService } from '../services/propertyService';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -273,6 +273,32 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
     marginBottom: '1rem'
   };
 
+  const containerStyle = {
+    width: '100%',
+    height: '400px',
+    borderRadius: '0.75rem',
+    overflow: 'hidden'
+  };
+
+  const center = {
+    lat: Number(formData.latitude) || 0,
+    lng: Number(formData.longitude) || 0
+  };
+
+  const marker = selectedLocation;
+
+  const onLoad = (map) => {
+    // This function is called when the map is fully loaded
+  };
+
+  const onUnmount = () => {
+    // This function is called when the map is unmounted
+  };
+
+  const onMapClick = (event) => {
+    handleMapClick(event);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
@@ -375,31 +401,18 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Property Location
               </label>
-              <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+              <div className="w-full h-[400px] rounded-lg overflow-hidden">
                 <GoogleMap
-                  mapContainerStyle={mapContainerStyle}
-                  center={mapCenter}
-                  zoom={13}
-                  onClick={handleMapClick}
+                  mapContainerStyle={containerStyle}
+                  center={center}
+                  zoom={15}
+                  onLoad={onLoad}
+                  onUnmount={onUnmount}
+                  onClick={onMapClick}
                 >
-                  {selectedLocation && (
-                    <Marker
-                      position={selectedLocation}
-                      draggable={true}
-                      onDragEnd={(e) => {
-                        const lat = e.latLng.lat();
-                        const lng = e.latLng.lng();
-                        setSelectedLocation({ lat, lng });
-                        setFormData(prev => ({
-                          ...prev,
-                          latitude: lat.toString(),
-                          longitude: lng.toString()
-                        }));
-                      }}
-                    />
-                  )}
+                  {marker && <Marker position={marker} />}
                 </GoogleMap>
-              </LoadScript>
+              </div>
               <div className="mt-2 text-sm text-gray-500">
                 Click on the map to select your property location
               </div>

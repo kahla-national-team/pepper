@@ -56,3 +56,42 @@ exports.deactivate = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getRentalLocations = async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    const result = await pool.query(`
+      SELECT 
+        id,
+        title,
+        address,
+        latitude,
+        longitude,
+        price,
+        image,
+        category
+      FROM rentals 
+      WHERE is_active = true 
+      AND latitude IS NOT NULL 
+      AND longitude IS NOT NULL
+    `);
+
+    const rentals = result.rows.map(rental => ({
+      id: rental.id,
+      title: rental.title,
+      address: rental.address,
+      location: {
+        lat: parseFloat(rental.latitude),
+        lng: parseFloat(rental.longitude)
+      },
+      price: rental.price,
+      image: rental.image,
+      category: rental.category
+    }));
+
+    res.json(rentals);
+  } catch (error) {
+    console.error('Error fetching rental locations:', error);
+    res.status(500).json({ message: 'Error fetching rental locations' });
+  }
+};

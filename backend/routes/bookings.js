@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/bookingController');
 const { authenticateToken } = require('../middleware/auth');
+const pool = require('../db');
 
 // Get all bookings for a user
 router.get('/', authenticateToken, async (req, res) => {
@@ -154,6 +155,40 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
     });
   } finally {
     client.release();
+  }
+});
+
+router.get('/owner', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log('Fetching bookings for user:', userId);
+    
+    const query = `
+      SELECT b.*, 
+             p.title as property_title,
+             u.name as guest_name
+      FROM bookings b
+      LEFT JOIN properties p ON b.property_id = p.id
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE p.owner_id = $1
+      ORDER BY b.created_at DESC
+    `;
+    
+    console.log('Executing query with userId:', userId);
+    const result = await pool.query(query, [userId]);
+    console.log('Query result:', result.rows);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Detailed error in /owner route:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
   }
 });
 

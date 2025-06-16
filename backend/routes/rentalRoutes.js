@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const rentalController = require('../controllers/rentalController');
+const auth = require('../middleware/auth');
 // Temporarily removing validation middleware
 // const { validateRental } = require('../middleware/validation');
 
@@ -206,5 +207,8 @@ router.get('/user/:userId', async (req, res) => {
 router.post('/', rentalController.create);
 router.put('/:id', rentalController.update);
 router.delete('/:id', rentalController.deactivate);
+
+// Get all rental locations
+router.get('/locations', rentalController.getRentalLocations);
 
 module.exports = router;
