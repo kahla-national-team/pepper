@@ -46,7 +46,7 @@ const ServicesPage = () => {
           type: 'conciergerie',
           title: "Personal Assistant",
           description: "24/7 personal concierge service.",
-          price: "From $50/hour",
+          price: "From DZD1000/hour",
           provider: {
             name: "Elite Concierge",
             rating: 4.8,

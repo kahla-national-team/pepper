@@ -58,13 +58,16 @@ router.get('/concierge/user', auth, async (req, res) => {
   const client = await req.app.locals.pool.connect();
   try {
     const query = `
-      SELECT b.*, cs.title as service_name, cs.category,
-             u.full_name as provider_name, u.email as provider_email
-      FROM bookings b
-      JOIN concierge_services cs ON b.service_id = cs.id
+      SELECT sr.*, 
+             cs.name as service_name, 
+             cs.category,
+             u.full_name as provider_name, 
+             u.email as provider_email
+      FROM service_requests sr
+      JOIN concierge_services cs ON sr.service_id = cs.id
       JOIN users u ON cs.owner_id = u.id
-      WHERE b.user_id = $1 AND b.service_type = 'concierge'
-      ORDER BY b.created_at DESC
+      WHERE sr.user_id = $1
+      ORDER BY sr.created_at DESC
     `;
 
     const result = await client.query(query, [req.user.id]);

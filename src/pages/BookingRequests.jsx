@@ -143,8 +143,10 @@ const BookingRequests = () => {
   // Filter requests based on active tab and type
   const pendingBookings = bookings.filter(booking => booking.status === 'pending');
   const pendingServiceRequests = serviceRequests.filter(request => request.status === 'pending');
-  const otherBookings = bookings.filter(booking => booking.status !== 'pending');
-  const otherServiceRequests = serviceRequests.filter(request => request.status !== 'pending');
+  const acceptedBookings = bookings.filter(booking => booking.status === 'accepted');
+  const acceptedServiceRequests = serviceRequests.filter(request => request.status === 'accepted');
+  const otherBookings = bookings.filter(booking => !['pending', 'accepted'].includes(booking.status));
+  const otherServiceRequests = serviceRequests.filter(request => !['pending', 'accepted'].includes(request.status));
 
   const displayRequests = activeTab === 'pending' 
     ? (activeType === 'all' 
@@ -152,6 +154,12 @@ const BookingRequests = () => {
         : activeType === 'property' 
           ? pendingBookings 
           : pendingServiceRequests)
+    : activeTab === 'accepted'
+    ? (activeType === 'all'
+        ? [...acceptedBookings, ...acceptedServiceRequests]
+        : activeType === 'property'
+          ? acceptedBookings
+          : acceptedServiceRequests)
     : (activeType === 'all'
         ? [...otherBookings, ...otherServiceRequests]
         : activeType === 'property'
@@ -205,7 +213,7 @@ const BookingRequests = () => {
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-4">
             <div className="flex flex-wrap gap-4">
               <button
                 onClick={() => setActiveTab('pending')}
@@ -217,6 +225,17 @@ const BookingRequests = () => {
               >
                 <FaBell className="inline mr-2" />
                 Pending Requests ({pendingBookings.length + pendingServiceRequests.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('accepted')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === 'accepted'
+                    ? 'bg-[#ff385c] text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <FaCheckCircle className="inline mr-2" />
+                Accepted Requests ({acceptedBookings.length + acceptedServiceRequests.length})
               </button>
               <button
                 onClick={() => setActiveTab('other')}
@@ -276,11 +295,13 @@ const BookingRequests = () => {
               <FaBell className="mx-auto h-16 w-16" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No {activeTab === 'pending' ? 'pending requests' : 'other requests'}
+              No {activeTab} requests
             </h3>
             <p className="text-gray-500">
               {activeTab === 'pending' 
                 ? 'You don\'t have any pending requests.'
+                : activeTab === 'accepted'
+                ? 'You don\'t have any accepted requests.'
                 : 'You don\'t have any other requests.'
               }
             </p>
