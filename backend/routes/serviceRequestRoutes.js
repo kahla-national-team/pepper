@@ -95,6 +95,42 @@ router.get('/my-requests', async (req, res) => {
   }
 });
 
+// Get user's service requests
+router.get('/user', async (req, res) => {
+  const client = await req.app.locals.pool.connect();
+  try {
+    const userId = req.user.id;
+
+    const result = await client.query(
+      `SELECT sr.*, 
+              cs.name as service_name, 
+              cs.category,
+              u.full_name as provider_name, 
+              u.email as provider_email
+       FROM service_requests sr
+       JOIN concierge_services cs ON sr.service_id = cs.id
+       JOIN users u ON cs.owner_id = u.id
+       WHERE sr.user_id = $1
+       ORDER BY sr.requested_date DESC, sr.requested_time DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching user service requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user service requests',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // Get service request details by ID
 router.get('/:id', async (req, res) => {
   const client = await req.app.locals.pool.connect();

@@ -315,32 +315,32 @@ const BookingRequests = () => {
               >
                 <div className="p-6">
                   <div className="flex justify-between items-start">
-                    <div className="flex-1">
+                      <div className="flex-1">
                       <div className="flex items-center mb-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
                           {request.status}
                         </span>
                         <span className="ml-4 text-sm text-gray-500">
                           {request.service_type === 'concierge' ? 'Concierge Service' : 'Property Booking'}
-                        </span>
-                      </div>
+                          </span>
+                        </div>
 
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {request.service_name || request.rental_title}
                       </h3>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                        <div className="flex items-center text-gray-600">
-                          <FaUser className="text-[#ff385c] mr-2" />
-                          <div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                          <div className="flex items-center text-gray-600">
+                            <FaUser className="text-[#ff385c] mr-2" />
+                            <div>
                             <p className="text-xs text-gray-500">Customer</p>
                             <p className="text-sm font-medium">{request.customer_name || request.guest_name || 'Unknown'}</p>
                             <p className="text-xs text-gray-500">{request.customer_email || request.guest_email || ''}</p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <FaCalendarAlt className="text-[#ff385c] mr-2" />
-                          <div>
+                          <div className="flex items-center text-gray-600">
+                            <FaCalendarAlt className="text-[#ff385c] mr-2" />
+                            <div>
                             <p className="text-xs text-gray-500">Date</p>
                             <p className="text-sm font-medium">
                               {formatDate(request.requested_date || request.start_date)}

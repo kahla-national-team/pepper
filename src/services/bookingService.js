@@ -199,7 +199,7 @@ export const bookingService = {
   // Get concierge service bookings for the current user
   getUserConciergeBookings: async () => {
     try {
-      const response = await api.get('/bookings/concierge/user');
+      const response = await api.get('/service-requests/user');
       return response.data;
     } catch (error) {
       console.error('Error fetching user concierge bookings:', error);
@@ -214,6 +214,17 @@ export const bookingService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching provider concierge bookings:', error);
+      throw error;
+    }
+  },
+
+  // Cancel a concierge booking
+  cancelConciergeBooking: async (id) => {
+    try {
+      const response = await api.post(`/service-requests/${id}/cancel`);
+      return response.data;
+    } catch (error) {
+      console.error('Error canceling concierge booking:', error);
       throw error;
     }
   }
