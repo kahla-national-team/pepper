@@ -3,12 +3,9 @@ import { FaPlus, FaEdit, FaTrash, FaStar, FaCalendarAlt } from 'react-icons/fa';
 import { conciergeService } from '../../services/conciergeService';
 import { authService } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import ServiceFormModal from './ServiceFormModal';
 
 const ServiceCard = ({ service, onEdit, onDelete }) => {
-  console.log('Service data in ServiceCard:', service);
-  console.log('Photo URL:', service.photo_url);
-  console.log('Image:', service.image);
-  
   return (
     <div className="bg-white rounded-2xl border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden group">
       <div className="relative h-48 overflow-hidden">
@@ -17,8 +14,7 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
           alt={service.name}
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
           onError={(e) => {
-            console.log('Image failed to load:', e.target.src);
-            e.target.onerror = null; // Prevent infinite loop
+            e.target.onerror = null;
             e.target.src = 'https://images.unsplash.com/photo-1555215695-300b0ca6ba4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
           }}
         />
@@ -36,12 +32,12 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
           <span className="text-[#ff385c] font-bold text-lg">${service.price}</span>
           <div className="flex items-center text-yellow-400">
             <FaStar />
-            <span className="ml-1 text-gray-600">{service.rating}</span>
+            <span className="ml-1 text-gray-600">{service.rating || 'New'}</span>
           </div>
         </div>
         <div className="flex items-center text-gray-500 mb-6">
           <FaCalendarAlt className="mr-2" />
-          <span>{service.bookings} bookings</span>
+          <span>{service.bookings || 0} bookings</span>
         </div>
         <div className="flex space-x-3">
           <button 
@@ -64,31 +60,28 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
   );
 };
 
-const ConciergeServices = ({ userId: propUserId, onAddService, onEditService, onDeleteService }) => {
+const ConciergeServices = ({ userId: propUserId }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { user } = authService;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
 
   useEffect(() => {
     const fetchServices = async () => {
       try {
         setLoading(true);
         const userId = propUserId || user?.id;
-        console.log('Fetching services for user:', userId);
-        
         const response = await conciergeService.getServicesByUserId(userId);
-        console.log('Services API response:', response);
         
         if (response.success) {
-          console.log('Setting services data:', response.data);
           setServices(response.data);
         } else {
           setError(response.message || 'Failed to fetch services');
         }
       } catch (err) {
-        console.error('Error fetching services:', err);
         setError(err.message || 'An error occurred while fetching services');
       } finally {
         setLoading(false);
@@ -99,6 +92,45 @@ const ConciergeServices = ({ userId: propUserId, onAddService, onEditService, on
       fetchServices();
     }
   }, [user?.id, propUserId]);
+
+  const handleAddService = () => {
+    setSelectedService(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditService = (service) => {
+    setSelectedService(service);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    if (window.confirm('Are you sure you want to delete this service?')) {
+      try {
+        await conciergeService.deleteService(serviceId);
+        setServices(services.filter(service => service.id !== serviceId));
+      } catch (error) {
+        setError(error.message || 'Failed to delete service');
+      }
+    }
+  };
+
+  const handleSubmitService = async (formData) => {
+    try {
+      if (selectedService) {
+        // Update existing service
+        const response = await conciergeService.updateService(selectedService.id, formData);
+        setServices(services.map(service => 
+          service.id === selectedService.id ? response.data : service
+        ));
+      } else {
+        // Create new service
+        const response = await conciergeService.createService(formData);
+        setServices([...services, response.data]);
+      }
+    } catch (error) {
+      throw new Error(error.message || 'Failed to save service');
+    }
+  };
 
   if (loading) {
     return (
@@ -168,6 +200,13 @@ const ConciergeServices = ({ userId: propUserId, onAddService, onEditService, on
           ))}
         </div>
       )}
+
+      <ServiceFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmitService}
+        initialData={selectedService}
+      />
     </div>
   );
 };

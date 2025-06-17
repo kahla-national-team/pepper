@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCalendarAlt, FaUser, FaHome, FaCheckCircle, FaTimes, FaEye, FaBell } from 'react-icons/fa';
+import { FaArrowLeft, FaCalendarAlt, FaUser, FaHome, FaCheckCircle, FaTimes, FaEye, FaBell, FaConciergeBell, FaClock } from 'react-icons/fa';
 import { bookingService } from '../services/bookingService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -10,34 +10,45 @@ const BookingRequests = () => {
   const auth = useAuth();
   console.log('Auth context in BookingRequests:', auth);
   const [bookings, setBookings] = useState([]);
+  const [serviceRequests, setServiceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
+  const [activeType, setActiveType] = useState('all'); // 'all', 'property', 'concierge'
 
   useEffect(() => {
-    const fetchOwnerBookings = async () => {
+    const fetchRequests = async () => {
       try {
         setLoading(true);
-        const bookingsData = await bookingService.getBookingsForOwner();
-        setBookings(bookingsData);
+        // Fetch both property bookings and concierge service requests
+        const [bookingsResponse, serviceRequestsResponse] = await Promise.all([
+          bookingService.getBookingsForOwner(),
+          bookingService.getProviderConciergeBookings()
+        ]);
+        
+        setBookings(bookingsResponse.data || []);
+        setServiceRequests(serviceRequestsResponse.data || []);
         setError(null);
       } catch (err) {
-        console.error('Error fetching owner bookings:', err);
-        setError(err.message || 'Failed to fetch booking requests');
+        console.error('Error fetching requests:', err);
+        setError(err.message || 'Failed to fetch requests');
       } finally {
         setLoading(false);
       }
     };
 
     if (auth) {
-      fetchOwnerBookings();
+      fetchRequests();
     }
   }, [auth]);
 
-  const handleAcceptBooking = async (bookingId) => {
+  const handleAcceptRequest = async (id, type) => {
     try {
-      // Update booking status to accepted
-      const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`, {
+      const endpoint = type === 'concierge' 
+        ? `/service-requests/${id}/status`
+        : `/bookings/${id}/status`;
+
+      const response = await fetch(`http://localhost:5000/api${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -49,26 +60,32 @@ const BookingRequests = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to accept booking');
+        throw new Error(data.error || data.message || 'Failed to accept request');
       }
 
-      // Refresh bookings
-      const updatedBookings = await bookingService.getBookingsForOwner();
-      setBookings(updatedBookings);
+      // Refresh requests
+      const [bookingsResponse, serviceRequestsResponse] = await Promise.all([
+        bookingService.getBookingsForOwner(),
+        bookingService.getProviderConciergeBookings()
+      ]);
       
-      // Show success message
-      alert('Booking request accepted successfully!');
-      console.log('✅ Booking updated:', data);
+      setBookings(bookingsResponse.data || []);
+      setServiceRequests(serviceRequestsResponse.data || []);
+      
+      alert('Request accepted successfully!');
     } catch (err) {
-      console.error('❌ Error accepting booking:', err);
-      alert(err.message || 'Failed to accept booking request. Please try again.');
+      console.error('Error accepting request:', err);
+      alert(err.message || 'Failed to accept request. Please try again.');
     }
   };
 
-  const handleRejectBooking = async (bookingId) => {
+  const handleRejectRequest = async (id, type) => {
     try {
-      // Update booking status to rejected
-      const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`, {
+      const endpoint = type === 'concierge' 
+        ? `/service-requests/${id}/status`
+        : `/bookings/${id}/status`;
+
+      const response = await fetch(`http://localhost:5000/api${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -80,19 +97,22 @@ const BookingRequests = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to reject booking');
+        throw new Error(data.error || data.message || 'Failed to reject request');
       }
 
-      // Refresh bookings
-      const updatedBookings = await bookingService.getBookingsForOwner();
-      setBookings(updatedBookings);
+      // Refresh requests
+      const [bookingsResponse, serviceRequestsResponse] = await Promise.all([
+        bookingService.getBookingsForOwner(),
+        bookingService.getProviderConciergeBookings()
+      ]);
       
-      // Show success message
-      alert('Booking request rejected successfully!');
-      console.log('✅ Booking updated:', data);
+      setBookings(bookingsResponse.data || []);
+      setServiceRequests(serviceRequestsResponse.data || []);
+      
+      alert('Request rejected successfully!');
     } catch (err) {
-      console.error('❌ Error rejecting booking:', err);
-      alert(err.message || 'Failed to reject booking request. Please try again.');
+      console.error('Error rejecting request:', err);
+      alert(err.message || 'Failed to reject request. Please try again.');
     }
   };
 
@@ -120,9 +140,23 @@ const BookingRequests = () => {
     });
   };
 
+  // Filter requests based on active tab and type
   const pendingBookings = bookings.filter(booking => booking.status === 'pending');
+  const pendingServiceRequests = serviceRequests.filter(request => request.status === 'pending');
   const otherBookings = bookings.filter(booking => booking.status !== 'pending');
-  const displayBookings = activeTab === 'pending' ? pendingBookings : otherBookings;
+  const otherServiceRequests = serviceRequests.filter(request => request.status !== 'pending');
+
+  const displayRequests = activeTab === 'pending' 
+    ? (activeType === 'all' 
+        ? [...pendingBookings, ...pendingServiceRequests]
+        : activeType === 'property' 
+          ? pendingBookings 
+          : pendingServiceRequests)
+    : (activeType === 'all'
+        ? [...otherBookings, ...otherServiceRequests]
+        : activeType === 'property'
+          ? otherBookings
+          : otherServiceRequests);
 
   if (loading) {
     return (
@@ -164,7 +198,7 @@ const BookingRequests = () => {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Booking Requests</h1>
-              <p className="text-gray-600">Manage booking requests for your properties</p>
+              <p className="text-gray-600">Manage booking and service requests</p>
             </div>
           </div>
         </div>
@@ -172,7 +206,7 @@ const BookingRequests = () => {
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
           <div className="p-6 border-b border-gray-200">
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               <button
                 onClick={() => setActiveTab('pending')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -182,7 +216,7 @@ const BookingRequests = () => {
                 }`}
               >
                 <FaBell className="inline mr-2" />
-                Pending Requests ({pendingBookings.length})
+                Pending Requests ({pendingBookings.length + pendingServiceRequests.length})
               </button>
               <button
                 onClick={() => setActiveTab('other')}
@@ -193,129 +227,150 @@ const BookingRequests = () => {
                 }`}
               >
                 <FaCalendarAlt className="inline mr-2" />
-                Other Bookings ({otherBookings.length})
+                Other Requests ({otherBookings.length + otherServiceRequests.length})
+              </button>
+            </div>
+
+            {/* Type Filter */}
+            <div className="mt-4 flex flex-wrap gap-4">
+              <button
+                onClick={() => setActiveType('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeType === 'all'
+                    ? 'bg-[#ff385c] text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Types
+              </button>
+              <button
+                onClick={() => setActiveType('property')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeType === 'property'
+                    ? 'bg-[#ff385c] text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <FaHome className="inline mr-2" />
+                Property Bookings
+              </button>
+              <button
+                onClick={() => setActiveType('concierge')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeType === 'concierge'
+                    ? 'bg-[#ff385c] text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <FaConciergeBell className="inline mr-2" />
+                Concierge Services
               </button>
             </div>
           </div>
         </div>
 
-        {/* Bookings List */}
-        {displayBookings.length === 0 ? (
+        {/* Requests List */}
+        {displayRequests.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <div className="text-gray-400 mb-4">
               <FaBell className="mx-auto h-16 w-16" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No {activeTab === 'pending' ? 'pending requests' : 'other bookings'}
+              No {activeTab === 'pending' ? 'pending requests' : 'other requests'}
             </h3>
             <p className="text-gray-500">
               {activeTab === 'pending' 
-                ? 'You don\'t have any pending booking requests for your properties.'
-                : 'You don\'t have any other bookings for your properties.'
+                ? 'You don\'t have any pending requests.'
+                : 'You don\'t have any other requests.'
               }
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {displayBookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
+            {displayRequests.map((request) => (
+              <div
+                key={request.id}
+                className="bg-white rounded-lg shadow overflow-hidden"
+              >
                 <div className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4 flex-1">
-                      <img
-                        src={booking.rental_image || '/placeholder-stay.jpg'}
-                        alt={booking.rental_title}
-                        className="w-20 h-20 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.target.src = '/placeholder-stay.jpg';
-                        }}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{booking.rental_title}</h3>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(booking.status)}`}>
-                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                          </span>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                          {request.status}
+                        </span>
+                        <span className="ml-4 text-sm text-gray-500">
+                          {request.service_type === 'concierge' ? 'Concierge Service' : 'Property Booking'}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {request.service_name || request.rental_title}
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                        <div className="flex items-center text-gray-600">
+                          <FaUser className="text-[#ff385c] mr-2" />
+                          <div>
+                            <p className="text-xs text-gray-500">Customer</p>
+                            <p className="text-sm font-medium">{request.customer_name || request.guest_name || 'Unknown'}</p>
+                            <p className="text-xs text-gray-500">{request.customer_email || request.guest_email || ''}</p>
+                          </div>
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                        <div className="flex items-center text-gray-600">
+                          <FaCalendarAlt className="text-[#ff385c] mr-2" />
+                          <div>
+                            <p className="text-xs text-gray-500">Date</p>
+                            <p className="text-sm font-medium">
+                              {formatDate(request.requested_date || request.start_date)}
+                            </p>
+                          </div>
+                        </div>
+                        {request.service_type === 'concierge' ? (
                           <div className="flex items-center text-gray-600">
-                            <FaUser className="text-[#ff385c] mr-2" />
+                            <FaClock className="text-[#ff385c] mr-2" />
                             <div>
-                              <p className="text-xs text-gray-500">Guest</p>
-                              <p className="text-sm font-medium">{booking.guest_name || 'Unknown'}</p>
-                              <p className="text-xs text-gray-500">{booking.guest_email || ''}</p>
+                              <p className="text-xs text-gray-500">Time</p>
+                              <p className="text-sm font-medium">{request.requested_time}</p>
                             </div>
                           </div>
-                          <div className="flex items-center text-gray-600">
-                            <FaCalendarAlt className="text-[#ff385c] mr-2" />
-                            <div>
-                              <p className="text-xs text-gray-500">Check-in</p>
-                              <p className="text-sm font-medium">{formatDate(booking.start_date)}</p>
-                            </div>
-                          </div>
+                        ) : (
                           <div className="flex items-center text-gray-600">
                             <FaCalendarAlt className="text-[#ff385c] mr-2" />
                             <div>
                               <p className="text-xs text-gray-500">Check-out</p>
-                              <p className="text-sm font-medium">{formatDate(booking.end_date)}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                          <div className="flex items-center text-gray-600">
-                            <FaUser className="text-[#ff385c] mr-2" />
-                            <div>
-                              <p className="text-xs text-gray-500">Guests</p>
-                              <p className="text-sm font-medium">{booking.guests} {booking.guests === 1 ? 'Guest' : 'Guests'}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center text-gray-600">
-                            <FaHome className="text-[#ff385c] mr-2" />
-                            <div>
-                              <p className="text-xs text-gray-500">Total Amount</p>
-                              <p className="text-sm font-semibold">${booking.total_amount}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Selected Services */}
-                        {booking.services && booking.services.length > 0 && (
-                          <div className="mb-3">
-                            <p className="text-xs text-gray-500 mb-1">Additional Services:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {booking.services.map((service, index) => (
-                                <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                  {service.service_name || service.service_title} (${service.service_price})
-                                </span>
-                              ))}
+                              <p className="text-sm font-medium">{formatDate(request.end_date)}</p>
                             </div>
                           </div>
                         )}
                       </div>
+
+                      {request.notes && (
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-600">{request.notes}</p>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Actions */}
                     <div className="flex flex-col space-y-2 ml-4">
                       <button
-                        onClick={() => window.open(`/booking-success/${booking.id}`, '_blank')}
+                        onClick={() => window.open(`/booking-success/${request.id}`, '_blank')}
                         className="flex items-center px-4 py-2 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors"
                       >
                         <FaEye className="mr-2" />
                         View Details
                       </button>
-                      {booking.status === 'pending' && (
+                      {request.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => handleAcceptBooking(booking.id)}
+                            onClick={() => handleAcceptRequest(request.id, request.service_type)}
                             className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
                           >
                             <FaCheckCircle className="mr-2" />
                             Accept Request
                           </button>
                           <button
-                            onClick={() => handleRejectBooking(booking.id)}
+                            onClick={() => handleRejectRequest(request.id, request.service_type)}
                             className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                           >
                             <FaTimes className="mr-2" />

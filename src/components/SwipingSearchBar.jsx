@@ -92,7 +92,14 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   // Update currentFilters when activeMode changes
   useEffect(() => {
     setCurrentFilters(activeMode === 'stays' ? defaultStaysFilters : defaultServicesFilters);
-  }, [activeMode]);
+  }, [activeMode, filters]);
+
+  // Ensure currentFilters is never undefined
+  useEffect(() => {
+    if (!currentFilters) {
+      setCurrentFilters(activeMode === 'stays' ? defaultStaysFilters : defaultServicesFilters);
+    }
+  }, [currentFilters, activeMode]);
 
   const totalGuests = currentFilters.guests ? currentFilters.guests.adults + currentFilters.guests.children + currentFilters.guests.babies : 0;
 

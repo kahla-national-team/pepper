@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FaCalendarAlt, FaUsers, FaTimes } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import bookingService from '../services/bookingService';
+import { bookingService } from '../services/bookingService';
 import ServiceSelection from './ServiceSelection';
 
 const BookingForm = ({ item, onSuccess, onCancel }) => {

@@ -1,31 +1,115 @@
+import api from './api';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
-
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+export const bookingService = {
+  // Create a new booking
+  createBooking: async (bookingData) => {
+    try {
+      console.log('bookingService - sending data:', bookingData);
+      const response = await api.post('/bookings', bookingData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      console.error('Error response:', error.response?.data);
+      
+      // Return a more specific error message
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else {
+        throw new Error('Failed to create booking. Please try again.');
+      }
     }
-    return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
-// Create the service object
-const bookingService = {
+  // Create a concierge service booking
+  createConciergeBooking: async (bookingData) => {
+    try {
+      // Get user ID from the JWT token in the Authorization header
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Please log in to request a service');
+      }
+
+      // Validate required fields
+      const requiredFields = ['service_id', 'requested_date', 'requested_time', 'duration', 'total_amount'];
+      const missingFields = requiredFields.filter(field => !bookingData[field]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      const serviceRequestPayload = {
+        service_id: bookingData.service_id,
+        requested_date: bookingData.requested_date,
+        requested_time: bookingData.requested_time,
+        duration: bookingData.duration,
+        total_amount: bookingData.total_amount,
+        notes: bookingData.notes || '',
+        status: 'pending'
+      };
+
+      // Log the exact payload being sent
+      console.log('Creating service request with payload:', JSON.stringify(serviceRequestPayload, null, 2));
+      
+      // Use the service-requests endpoint
+      const response = await api.post('/service-requests', serviceRequestPayload);
+      return response.data;
+    } catch (error) {
+      // Log the complete error object
+      console.error('Full error object:', error);
+      
+      // Log the response data if it exists
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+      }
+
+      // More detailed error logging
+      console.error('Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        stack: error.stack,
+        requestData: bookingData
+      });
+      
+      // More specific error handling with better error messages
+      if (error.response?.status === 401) {
+        throw new Error('Please log in to request a service');
+      } else if (error.response?.status === 500) {
+        // Log the full server error
+        console.error('Server error details:', error.response?.data);
+        const serverError = error.response?.data?.error || error.response?.data?.message || 'Unknown server error';
+        throw new Error(`Server error: ${serverError}`);
+      } else if (error.response?.data?.message) {
+        throw new Error(`Service request failed: ${error.response.data.message}`);
+      } else if (error.message) {
+        throw new Error(`Service request failed: ${error.message}`);
+      } else {
+        throw new Error('Failed to create service request. Please try again.');
+      }
+    }
+  },
+
+  // Get booking details by ID
+  getBooking: async (id) => {
+    try {
+      if (!id) {
+        throw new Error('Booking ID is required');
+      }
+      const response = await api.get(`/service-requests/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching booking:', error);
+      throw error;
+    }
+  },
+
+  // Get all bookings for the current user
   getUserBookings: async () => {
     try {
       const response = await api.get('/bookings/user');
@@ -36,26 +120,7 @@ const bookingService = {
     }
   },
 
-  createBooking: async (bookingData) => {
-    try {
-      const response = await api.post('/bookings', bookingData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      throw error;
-    }
-  },
-
-  getBooking: async (id) => {
-    try {
-      const response = await api.get(`/bookings/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching booking:', error);
-      throw error;
-    }
-  },
-
+  // Cancel a booking
   cancelBooking: async (id) => {
     try {
       const response = await api.post(`/bookings/${id}/cancel`);
@@ -66,6 +131,7 @@ const bookingService = {
     }
   },
 
+  // Check availability for a date range
   checkAvailability: async (rentalId, startDate, endDate) => {
     try {
       const response = await api.get('/bookings/check-availability', {
@@ -82,30 +148,90 @@ const bookingService = {
     }
   },
 
+  // Get bookings for properties owned by the current user
   getBookingsForOwner: async () => {
     try {
-      const response = await api.get('/bookings/owner');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching owner bookings:', error);
-      throw error;
-    }
-  },
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Authentication required');
+      }
 
-  getOwnerBookings: async () => {
-    try {
-      const response = await axios.get(`${API_URL}/bookings/owner`, {
+      // Get the current user's ID from the token or auth service
+      const userId = JSON.parse(atob(token.split('.')[1])).id; // Decode JWT token to get user ID
+      
+      const response = await api.get(`/bookings/user/${userId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to fetch owner bookings');
+      }
+
       return response.data;
     } catch (error) {
       console.error('Error fetching owner bookings:', error);
+      
+      if (error.response) {
+        console.error('Error response:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      }
+
+      if (error.response?.status === 401) {
+        throw new Error('Please log in to view your bookings');
+      } else if (error.response?.status === 500) {
+        console.error('Server error details:', error.response?.data);
+        throw new Error('Server error occurred while fetching bookings');
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else {
+        throw new Error('Failed to fetch owner bookings. Please try again.');
+      }
+    }
+  },
+
+  // Get concierge service bookings for the current user
+  getUserConciergeBookings: async () => {
+    try {
+      const response = await api.get('/bookings/concierge/user');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user concierge bookings:', error);
       throw error;
     }
   },
+
+  // Get concierge service bookings for the service provider
+  getProviderConciergeBookings: async () => {
+    try {
+      const response = await api.get('/bookings/concierge/provider');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider concierge bookings:', error);
+      throw error;
+    }
+  }
 };
 
-export default bookingService; 
+const API_URL = 'http://localhost:5000/api';
+
+export const getOwnerBookings = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/bookings/owner`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching owner bookings:', error);
+    throw error;
+  }
+}; 

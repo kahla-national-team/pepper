@@ -5,8 +5,9 @@ import { motion } from 'framer-motion';
 import { FaStar, FaClock, FaMapMarkerAlt, FaEnvelope, FaCheck, FaCalendarAlt } from 'react-icons/fa';
 import { conciergeService } from '../services/conciergeService';
 import Review from '../components/Review';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import BookingForm from '../components/BookingForm';
+import ConciergeBookingForm from '../components/ConciergeBookingForm';
 
 const DetailsPage = () => {
   const { type, id } = useParams();
@@ -261,16 +262,24 @@ const DetailsPage = () => {
               </div>
 
               {showBookingForm && (
-                <BookingForm
-                  item={{
-                    id,
-                    type,
-                    price: extractNumericPrice(item?.price),
-                    maxGuests: 10 // Default value for services, can be made configurable
-                  }}
-                  onSuccess={handleBookingSuccess}
-                  onCancel={handleBookingCancel}
-                />
+                type === 'concierge' ? (
+                  <ConciergeBookingForm
+                    service={item}
+                    onSuccess={handleBookingSuccess}
+                    onCancel={handleBookingCancel}
+                  />
+                ) : (
+                  <BookingForm
+                    item={{
+                      id,
+                      type,
+                      price: extractNumericPrice(item?.price),
+                      maxGuests: 10 // Default value for services, can be made configurable
+                    }}
+                    onSuccess={handleBookingSuccess}
+                    onCancel={handleBookingCancel}
+                  />
+                )
               )}
             </div>
           </div>

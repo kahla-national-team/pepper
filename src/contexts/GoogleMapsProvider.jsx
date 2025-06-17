@@ -15,6 +15,15 @@ export const GoogleMapsProvider = ({ children }) => {
   useEffect(() => {
     if (isScriptLoaded) {
       setScriptLoaded(true);
+      return;
+    }
+
+    // Check if Google Maps script is already in the document
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      isScriptLoaded = true;
+      setScriptLoaded(true);
+      return;
     }
   }, []);
 
@@ -39,6 +48,9 @@ export const GoogleMapsProvider = ({ children }) => {
       version="weekly"
       onLoad={handleLoad}
       onError={handleError}
+      preventGoogleFontsLoading={true}
+      loadingElement={<div>Loading...</div>}
+      mapIds={['YOUR_MAP_ID']} // Add your map ID if you have one
     >
       {children}
     </LoadScript>

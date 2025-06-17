@@ -19,7 +19,7 @@ const favoriteRoutes = require('./routes/favoriteRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const conciergeRoutes = require('./routes/conciergeRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
-const serviceRequestRoutes = require('./routes/conciergeRoutes');
+const serviceRequestRoutes = require('./routes/serviceRequestRoutes');
 const notificationRoutes = require('./routes/notifications');
 
 const app = express();
@@ -136,7 +136,7 @@ app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/concierge', conciergeRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/service-requests', conciergeRoutes);
+app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint

@@ -192,4 +192,48 @@ router.get('/owner', authenticateToken, async (req, res) => {
   }
 });
 
+// Get bookings for a specific user by ID
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+  const client = await req.app.locals.pool.connect();
+  try {
+    const { userId } = req.params;
+    
+    // Validate userId is a number
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
+
+    const query = `
+      SELECT b.*, 
+             r.title as property_name,
+             u.full_name as user_name,
+             u.email as user_email
+      FROM bookings b
+      LEFT JOIN rentals r ON b.rental_id = r.id
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE b.user_id = $1
+      ORDER BY b.created_at DESC
+    `;
+
+    const result = await client.query(query, [userId]);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching user bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user bookings',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router; 
