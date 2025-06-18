@@ -139,10 +139,16 @@ router.get('/:id', async (req, res) => {
     const userId = req.user.id;
 
     const result = await client.query(
-      `SELECT sr.*, s.name as service_name, s.description as service_description
+      `SELECT sr.*, 
+              cs.name as service_name, 
+              cs.description as service_description,
+              cs.category,
+              u.full_name as provider_name, 
+              u.email as provider_email
        FROM service_requests sr
-       JOIN concierge_services s ON sr.service_id = s.id
-       WHERE sr.id = $1 AND s.owner_id = $2`,
+       JOIN concierge_services cs ON sr.service_id = cs.id
+       JOIN users u ON cs.owner_id = u.id
+       WHERE sr.id = $1 AND (sr.user_id = $2 OR cs.owner_id = $2)`,
       [id, userId]
     );
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaCheckCircle, FaCalendarAlt, FaMapMarkerAlt, FaUser, FaCreditCard, FaEnvelope, FaClock } from 'react-icons/fa';
+import { FaCheckCircle, FaCalendarAlt, FaMapMarkerAlt, FaUser, FaCreditCard, FaEnvelope, FaClock, FaHome } from 'react-icons/fa';
 import { bookingService } from '../services/bookingService';
 
 const BookingSuccess = () => {
@@ -21,11 +21,25 @@ const BookingSuccess = () => {
         const response = await bookingService.getBooking(id);
         console.log('Booking details response:', response); // Debug log
         
+        // Handle both service requests and rental bookings
+        let bookingData;
         if (response.success && response.request) {
-          setBooking(response.request);
+          // Service request format
+          bookingData = response.request;
+        } else if (response.success && response.data) {
+          // Rental booking format
+          bookingData = response.data;
+        } else if (response.request) {
+          // Direct service request object
+          bookingData = response.request;
+        } else if (response.data) {
+          // Direct rental booking object
+          bookingData = response.data;
         } else {
           throw new Error('Invalid booking data received');
         }
+        
+        setBooking(bookingData);
       } catch (err) {
         console.error('Error fetching booking:', err);
         setError(err.message || 'Failed to load booking details');
@@ -70,18 +84,23 @@ const BookingSuccess = () => {
           {/* Success Header */}
           <div className="bg-green-50 px-6 py-8 text-center">
             <FaCheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Service Request Confirmed!</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {booking.service_name ? 'Service Request Confirmed!' : 'Booking Confirmed!'}
+            </h1>
             <p className="text-lg text-gray-600">
-              Your service request has been successfully submitted. Request ID: {booking.id}
+              Your {booking.service_name ? 'service request' : 'booking'} has been successfully submitted. 
+              {booking.service_name ? 'Request' : 'Booking'} ID: {booking.id}
             </p>
           </div>
 
           {/* Booking Details */}
           <div className="px-6 py-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Service Request Details</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              {booking.service_name ? 'Service Request' : 'Booking'} Details
+            </h2>
             
             <div className="space-y-6">
-              {/* Service Information */}
+              {/* Service/Property Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center text-gray-600">
@@ -89,18 +108,32 @@ const BookingSuccess = () => {
                     <div>
                       <p className="text-sm text-gray-500">Date</p>
                       <p className="font-medium">
-                        {new Date(booking.requested_date).toLocaleDateString()}
+                        {new Date(booking.requested_date || booking.start_date).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
 
+                  {booking.requested_time && (
                   <div className="flex items-center text-gray-600">
-                    <FaClock className="text-[#ff385c] mr-3" />
+                      <FaClock className="text-[#ff385c] mr-3" />
                     <div>
-                      <p className="text-sm text-gray-500">Time</p>
-                      <p className="font-medium">{booking.requested_time}</p>
+                        <p className="text-sm text-gray-500">Time</p>
+                        <p className="font-medium">{booking.requested_time}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {booking.end_date && (
+                    <div className="flex items-center text-gray-600">
+                      <FaCalendarAlt className="text-[#ff385c] mr-3" />
+                      <div>
+                        <p className="text-sm text-gray-500">Check-out</p>
+                        <p className="font-medium">
+                          {new Date(booking.end_date).toLocaleDateString()}
+                        </p>
                     </div>
                   </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -119,6 +152,26 @@ const BookingSuccess = () => {
                       <p className="font-medium capitalize">{booking.status}</p>
                     </div>
                   </div>
+
+                  {booking.service_name && (
+                    <div className="flex items-center text-gray-600">
+                      <FaUser className="text-[#ff385c] mr-3" />
+                      <div>
+                        <p className="text-sm text-gray-500">Service</p>
+                        <p className="font-medium">{booking.service_name}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {booking.rental_title && (
+                    <div className="flex items-center text-gray-600">
+                      <FaHome className="text-[#ff385c] mr-3" />
+                      <div>
+                        <p className="text-sm text-gray-500">Property</p>
+                        <p className="font-medium">{booking.rental_title}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -141,11 +194,16 @@ const BookingSuccess = () => {
                 </li>
                 <li className="flex items-start">
                   <FaCheckCircle className="text-green-500 mt-1 mr-3 flex-shrink-0" />
-                  <p className="text-gray-600">You can view your service request details anytime in your account dashboard.</p>
+                  <p className="text-gray-600">You can view your {booking.service_name ? 'service request' : 'booking'} details anytime in your account dashboard.</p>
                 </li>
                 <li className="flex items-start">
                   <FaCheckCircle className="text-green-500 mt-1 mr-3 flex-shrink-0" />
-                  <p className="text-gray-600">The service provider will contact you shortly to confirm your request.</p>
+                  <p className="text-gray-600">
+                    {booking.service_name 
+                      ? 'The service provider will contact you shortly to confirm your request.'
+                      : 'The property owner will review your booking and confirm availability.'
+                    }
+                  </p>
                 </li>
               </ul>
             </div>
@@ -153,10 +211,10 @@ const BookingSuccess = () => {
             {/* Action Buttons */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/bookings')}
                 className="flex-1 px-6 py-3 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors"
               >
-                View All Requests
+                View All {booking.service_name ? 'Requests' : 'Bookings'}
               </button>
               <button
                 onClick={() => navigate('/')}

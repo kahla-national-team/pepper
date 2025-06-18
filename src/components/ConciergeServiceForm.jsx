@@ -96,7 +96,11 @@ const ConciergeServiceForm = ({ onSubmit, onCancel, initialData = {} }) => {
         
         // Append all form fields
         Object.keys(formData).forEach(key => {
-          submitData.append(key, formData[key]);
+          let value = formData[key];
+          if (key === 'price' || key === 'duration_minutes') {
+            value = value ? Number(value) : '';
+          }
+          submitData.append(key, value);
         });
 
         // Append image if selected

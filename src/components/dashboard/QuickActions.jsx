@@ -28,6 +28,20 @@ const QuickActions = () => {
           <FaPlus />
           <span>Add Property</span>
         </button>
+        <button
+          onClick={() => navigate('/add-concierge-service')}
+          className="w-full bg-[#ff385c] text-white py-3 px-4 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+        >
+          <FaPlus />
+          <span>Add Concierge Service</span>
+        </button>
+        <button
+          onClick={() => navigate('/dashboard/concierge-services')}
+          className="w-full bg-[#ff385c] text-white py-3 px-4 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+        >
+          <FaBell />
+          <span>View Your Services</span>
+        </button>
         <button 
           onClick={() => navigate('/dashboard/properties')}
           className="w-full bg-[#ff385c] text-white py-3 px-4 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2"

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import ServiceCard from "../components/ServiceCard";
+import ConciergeServices from '../components/dashboard/ConciergeServices';
 
 const DashboardService = () => {
   // Dummy stats for display
@@ -164,6 +165,9 @@ const DashboardService = () => {
           ))}
         </div>
       )}
+
+      <h1 className="text-3xl font-bold mb-8 mt-10">Concierge Services</h1>
+      <ConciergeServices />
     </div>
   );
 };

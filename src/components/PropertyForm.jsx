@@ -7,11 +7,13 @@ import { GoogleMap, Marker } from '@react-google-maps/api';
 import { propertyService } from '../services/propertyService';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useGoogleMaps } from '../contexts/GoogleMapsProvider';
 
 const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { isLoaded: isGoogleMapsLoaded, loadError: googleMapsError } = useGoogleMaps();
   const isAdmin = location.pathname.includes('/admin');
   const [formData, setFormData] = useState({
     title: '',
@@ -402,6 +404,20 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
                 Property Location
               </label>
               <div className="w-full h-[400px] rounded-lg overflow-hidden">
+                {!isGoogleMapsLoaded ? (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-gray-300 border-t-[#ff385c] rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-gray-500">Loading map...</p>
+                    </div>
+                  </div>
+                ) : googleMapsError ? (
+                  <div className="w-full h-full bg-red-50 flex items-center justify-center">
+                    <div className="text-center text-red-600">
+                      <p>Error loading map. Please refresh the page.</p>
+                    </div>
+                  </div>
+                ) : (
                 <GoogleMap
                   mapContainerStyle={containerStyle}
                   center={center}
@@ -412,6 +428,7 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
                 >
                   {marker && <Marker position={marker} />}
                 </GoogleMap>
+                )}
               </div>
               <div className="mt-2 text-sm text-gray-500">
                 Click on the map to select your property location

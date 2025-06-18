@@ -165,28 +165,24 @@ const ConciergeServices = ({ userId: propUserId }) => {
           <h2 className="text-2xl font-bold text-[#ff385c]">Concierge Services</h2>
           <p className="text-gray-500 mt-1">Manage and track your service offerings</p>
         </div>
-        {onAddService && (
-          <button 
-            onClick={onAddService}
-            className="flex items-center space-x-2 bg-[#ff385c] text-white px-6 py-3 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02]"
-          >
-            <FaPlus />
-            <span>Add New Service</span>
-          </button>
-        )}
+        <button 
+          onClick={handleAddService}
+          className="flex items-center space-x-2 bg-[#ff385c] text-white px-6 py-3 rounded-xl hover:bg-[#ff385c]/90 transition-all transform hover:scale-[1.02]"
+        >
+          <FaPlus />
+          <span>Add New Service</span>
+        </button>
       </div>
 
       {services.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">No services found</p>
-          {onAddService && (
-            <button 
-              onClick={onAddService}
-              className="mt-4 px-6 py-3 bg-[#ff385c] text-white rounded-xl hover:bg-[#ff385c]/90"
-            >
-              Add Your First Service
-            </button>
-          )}
+          <button 
+            onClick={handleAddService}
+            className="mt-4 px-6 py-3 bg-[#ff385c] text-white rounded-xl hover:bg-[#ff385c]/90"
+          >
+            Add Your First Service
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -194,8 +190,8 @@ const ConciergeServices = ({ userId: propUserId }) => {
             <ServiceCard 
               key={service.id} 
               service={service} 
-              onEdit={onEditService}
-              onDelete={onDeleteService}
+              onEdit={handleEditService}
+              onDelete={handleDeleteService}
             />
           ))}
         </div>

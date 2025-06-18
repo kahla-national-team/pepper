@@ -19,7 +19,7 @@ const app = express();
 const pool = new Pool({
   user: process.env.PG_USER || 'postgres',
   host: process.env.PG_HOST || 'localhost',
-  database: process.env.PG_DATABASE || 'butlerdb',
+  database: process.env.PG_DATABASE || 'butler',
   password: process.env.PG_PASSWORD || 'dembele',
   port: process.env.PG_PORT || 5432,
 });
@@ -47,6 +47,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Debug middleware to log requests
 app.use((req, res, next) => {

@@ -1,5 +1,4 @@
 const { cloudinary } = require('../config/cloudinary');
-const NotificationService = require('../services/notificationService');
 
 const reviewController = {
   // Get all reviews for a specific user
@@ -80,10 +79,64 @@ const reviewController = {
   createReview: async (req, res) => {
     const client = await req.app.locals.pool.connect();
     try {
+      // Add detailed logging for debugging
+      console.log('Review submission - Request body:', req.body);
+      console.log('Review submission - User ID:', req.user?.id);
+      
       await client.query('BEGIN');
 
       const { rental_id, rating, comment } = req.body;
-      const user_id = req.user.id;
+      const user_id = req.user?.id;
+
+      // Validate user authentication
+      if (!user_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      // Validate required fields
+      if (!rental_id || !rating) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rental ID and rating are required'
+        });
+      }
+
+      // Validate rating range
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rating must be between 1 and 5'
+        });
+      }
+
+      // Validate data types
+      if (typeof rental_id !== 'number' && isNaN(parseInt(rental_id))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rental ID must be a valid number'
+        });
+      }
+
+      if (typeof rating !== 'number' && isNaN(parseInt(rating))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rating must be a valid number'
+        });
+      }
+
+      // Convert to proper types
+      const rentalId = parseInt(rental_id);
+      const ratingValue = parseInt(rating);
+
+      console.log('Review submission - Validated data:', {
+        user_id,
+        rental_id: rentalId,
+        rating: ratingValue,
+        comment
+      });
 
       // Get rental details
       const rentalResult = await client.query(
@@ -91,44 +144,58 @@ const reviewController = {
          FROM rentals r
          JOIN users u ON r.owner_id = u.id
          WHERE r.id = $1`,
-        [rental_id]
-        );
+        [rentalId]
+      );
 
       if (rentalResult.rows.length === 0) {
-        throw new Error('Rental not found');
+        return res.status(404).json({
+          success: false,
+          message: 'Rental not found'
+        });
       }
 
       const rental = rentalResult.rows[0];
+      console.log('Review submission - Found rental:', rental.title);
+
+      // Check if user has already reviewed this rental
+      const existingReview = await client.query(
+        'SELECT id FROM reviews WHERE user_id = $1 AND rental_id = $2',
+        [user_id, rentalId]
+      );
+
+      if (existingReview.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'You have already reviewed this rental'
+        });
+      }
 
       // Create review
       const reviewResult = await client.query(
         `INSERT INTO reviews (user_id, rental_id, rating, comment)
          VALUES ($1, $2, $3, $4)
          RETURNING *`,
-        [user_id, rental_id, rating, comment]
+        [user_id, rentalId, ratingValue, comment]
       );
 
       const review = reviewResult.rows[0];
+      console.log('Review submission - Created review:', review.id);
 
-      // Get user details for notification
-      const userResult = await client.query(
-        'SELECT full_name FROM users WHERE id = $1',
-        [user_id]
-      );
-      const user = userResult.rows[0];
-
-      // Create notification service instance
-      const notificationService = new NotificationService(req.app.locals.pool);
-
-      // Send notification
-      await notificationService.notifyNewReview({
-        ...review,
-        property_name: rental.title,
-        user_name: user.full_name,
-        owner_id: rental.owner_id
-      });
+      // Create a simple notification in the notifications table
+      try {
+        await client.query(
+          `INSERT INTO notifications (user_id, message, is_read)
+           VALUES ($1, $2, false)`,
+          [rental.owner_id, `You have received a new ${ratingValue}-star review for ${rental.title}`]
+        );
+        console.log('Review submission - Created notification for owner');
+      } catch (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        // Don't fail the review creation if notification fails
+      }
 
       await client.query('COMMIT');
+      console.log('Review submission - Transaction committed successfully');
 
       res.status(201).json({
         success: true,
@@ -137,12 +204,21 @@ const reviewController = {
       });
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('Error creating review:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Error creating review',
-        error: error.message
-      });
+      console.error('Error creating review - Full error:', error);
+      console.error('Error creating review - Stack trace:', error.stack);
+      
+      // Return more detailed error information in development
+      const errorResponse = {
+        success: false,
+        message: error.message || 'Error creating review'
+      };
+      
+      if (process.env.NODE_ENV === 'development') {
+        errorResponse.stack = error.stack;
+        errorResponse.details = error;
+      }
+      
+      res.status(500).json(errorResponse);
     } finally {
       client.release();
     }

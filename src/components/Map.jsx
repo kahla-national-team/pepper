@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GoogleMap, useLoadScript } from '@react-google-maps/api';
+import { GoogleMap } from '@react-google-maps/api';
+import { useGoogleMaps } from '../contexts/GoogleMapsProvider';
 
 const Map = ({ properties = [], center, zoom = 12, onMarkerClick }) => {
   const mapRef = useRef(null);
@@ -9,11 +10,7 @@ const Map = ({ properties = [], center, zoom = 12, onMarkerClick }) => {
   const [error, setError] = useState(null);
   const markersRef = useRef({});
 
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['places'],
-    preventGoogleFontsLoading: true
-  });
+  const { isLoaded, loadError } = useGoogleMaps();
 
   useEffect(() => {
     if (loadError) {
@@ -23,7 +20,7 @@ const Map = ({ properties = [], center, zoom = 12, onMarkerClick }) => {
   }, [loadError]);
 
   useEffect(() => {
-    if (isLoaded && !map) {
+    if (isLoaded && !map && mapRef.current) {
       const newMap = new window.google.maps.Map(mapRef.current, {
         center: center || { lat: 0, lng: 0 },
         zoom: zoom,
@@ -58,7 +55,7 @@ const Map = ({ properties = [], center, zoom = 12, onMarkerClick }) => {
     }
   }, [map, properties, onMarkerClick]);
 
-  if (isLoading) return <div>Loading map...</div>;
+  if (!isLoaded) return <div>Loading map...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (

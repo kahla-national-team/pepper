@@ -240,15 +240,7 @@ const Dashboard = () => {
           <QuickActions />
         </div>
 
-        {/* Concierge Services Section */}
-        <div className="mb-8">
-          <ConciergeServices 
-            services={services} 
-            onAddService={() => setIsModalOpen(true)}
-            onEditService={handleEditService}
-            onDeleteService={handleDeleteService}
-          />
-        </div>
+     
 
         {/* Service Announcements */}
         <ServiceAnnouncements />

@@ -3,9 +3,20 @@ const { cloudinary } = require('../config/cloudinary');
 const conciergeController = {
 // Create a new concierge service
   createService: async (req, res) => {
+    // Defensive: check authentication
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
     const { name, category, description, price, duration_minutes } = req.body;
     const owner_id = req.user.id;
-    const photo_url = req.file ? req.file.path : null;
+    // Use Cloudinary URL for photo_url
+    const photo_url = req.file ? `/uploads/concierge/${req.file.filename}` : null;
+
+    // Defensive: check required fields
+    if (!name || !category || !price) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
 
     try {
       const result = await req.app.locals.pool.query(
@@ -22,14 +33,7 @@ const conciergeController = {
         message: 'Concierge service created successfully'
       });
     } catch (error) {
-      // If there was an error and we uploaded a file, delete it from Cloudinary
-      if (photo_url) {
-        try {
-          await cloudinary.uploader.destroy(photo_url.split('/').pop().split('.')[0]);
-        } catch (deleteError) {
-          console.error('Error deleting uploaded file:', deleteError);
-        }
-      }
+      // No Cloudinary cleanup needed for local uploads
 
       console.error('Error creating concierge service:', error);
       res.status(500).json({
@@ -69,7 +73,7 @@ const conciergeController = {
     const { id } = req.params;
     const { name, category, description, price, duration_minutes, is_active } = req.body;
     const owner_id = req.user.id;
-    const photo_url = req.file ? req.file.path : undefined;
+    const photo_url = req.file ? `/uploads/concierge/${req.file.filename}` : undefined;
 
     try {
       // First check if the service belongs to the owner
@@ -87,12 +91,7 @@ const conciergeController = {
 
       // If there's a new photo and an old photo, delete the old one
       if (photo_url && checkResult.rows[0].photo_url) {
-        try {
-          const oldPhotoPublicId = checkResult.rows[0].photo_url.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(oldPhotoPublicId);
-        } catch (deleteError) {
-          console.error('Error deleting old photo:', deleteError);
-        }
+        // No Cloudinary cleanup needed for local uploads
       }
 
       const updateFields = [];
@@ -156,11 +155,7 @@ const conciergeController = {
     } catch (error) {
       // If there was an error and we uploaded a new file, delete it
       if (photo_url) {
-        try {
-          await cloudinary.uploader.destroy(photo_url.split('/').pop().split('.')[0]);
-        } catch (deleteError) {
-          console.error('Error deleting uploaded file:', deleteError);
-        }
+        // No Cloudinary cleanup needed for local uploads
       }
 
       console.error('Error updating concierge service:', error);
@@ -193,12 +188,7 @@ const conciergeController = {
 
       // If there's a photo, delete it from Cloudinary
       if (checkResult.rows[0].photo_url) {
-        try {
-          const photoPublicId = checkResult.rows[0].photo_url.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(photoPublicId);
-        } catch (deleteError) {
-          console.error('Error deleting photo from Cloudinary:', deleteError);
-        }
+        // No Cloudinary cleanup needed for local uploads
       }
 
       const result = await req.app.locals.pool.query(

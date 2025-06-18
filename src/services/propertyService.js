@@ -5,7 +5,7 @@ const API_URL = 'http://localhost:5000/api';
 // Cloudinary configuration
 const CLOUDINARY_CONFIG = {
   cloudName: 'dgoz9p4ld',
-  uploadPreset: 'dgoz9p4ld',
+  uploadPreset: 'butler',
   apiKey: '599637781456269'
 };
 
@@ -35,12 +35,8 @@ const uploadToCloudinary = async (file, retries = 3) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-  formData.append('cloud_name', CLOUDINARY_CONFIG.cloudName);
-  formData.append('api_key', CLOUDINARY_CONFIG.apiKey);
-  
-  // Add optimization parameters
-  formData.append('transformation', 'f_auto,q_auto,w_1200,c_scale');
   formData.append('folder', 'pepper_rentals');
+  formData.append('transformation', 'f_auto,q_auto,w_1200,c_scale');
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {

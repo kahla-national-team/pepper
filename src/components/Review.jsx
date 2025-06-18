@@ -49,18 +49,16 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
     if (user) {
       // Authenticated user review
       const reviewData = {
-        rating: newReview.rating,
+        rating: Number(newReview.rating),
         comment: newReview.comment,
-        item_id: itemId,
-        item_type: itemType,
-        user_id: user.id
+        ...(itemType === 'rental' ? { rental_id: Number(itemId) } : {})
       };
 
       try {
         setSubmitting(true);
-      const response = await reviewService.createReview(reviewData);
-      if (response.success) {
-        setReviews(prevReviews => [response.data, ...prevReviews]);
+        const response = await reviewService.createReview(reviewData);
+        if (response.success) {
+          setReviews(prevReviews => [response.data, ...prevReviews]);
           setIsReviewFormVisible(false);
           setNewReview({
             rating: 5,
@@ -71,16 +69,16 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
           if (onReviewSubmit) {
             onReviewSubmit();
           }
-      }
-    } catch (error) {
-      console.error('Error submitting review:', error);
+        }
+      } catch (error) {
+        console.error('Error submitting review:', error);
         if (error.response?.status === 401) {
           alert('Please log in to submit a review');
         } else {
-      alert('Failed to submit review. Please try again.');
+          alert('Failed to submit review. Please try again.');
         }
-    } finally {
-      setSubmitting(false);
+      } finally {
+        setSubmitting(false);
       }
     } else {
       // Redirect to login if not authenticated

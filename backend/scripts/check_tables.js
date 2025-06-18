@@ -10,21 +10,39 @@ const pool = new Pool({
 });
 
 async function checkTables() {
-  const client = await pool.connect();
   try {
-    // Check all tables
-    const tables = await client.query(`
+    console.log('Checking what tables exist in the database...');
+    
+    // Get all tables
+    const tablesResult = await pool.query(`
       SELECT table_name 
       FROM information_schema.tables 
-      WHERE table_schema = 'public';
+      WHERE table_schema = 'public' 
+      ORDER BY table_name
     `);
-    console.log('Tables:', tables.rows);
-
+    
+    console.log('Available tables:');
+    tablesResult.rows.forEach(row => {
+      console.log(`  - ${row.table_name}`);
+    });
+    
+    // Check if bookings table exists and has data
+    if (tablesResult.rows.some(row => row.table_name === 'bookings')) {
+      const bookingsResult = await pool.query(
+        'SELECT id, user_id, rental_id, start_date, status FROM bookings ORDER BY id LIMIT 10'
+      );
+      
+      console.log('\nBookings table data:');
+      console.log('Total count:', bookingsResult.rows.length);
+      if (bookingsResult.rows.length > 0) {
+        console.log('Available IDs:', bookingsResult.rows.map(r => r.id).join(', '));
+      }
+    }
+    
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error checking tables:', error);
   } finally {
-    client.release();
-    pool.end();
+    await pool.end();
   }
 }
 

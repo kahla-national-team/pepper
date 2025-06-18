@@ -703,7 +703,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Minimum price</label>
                       <input
                         type="number"
-                        value={currentFilters.priceRange.min}
+                        value={currentFilters.priceRange?.min ?? 0}
                         onChange={(e) => handlePriceRangeChange(e.target.value, currentFilters.priceRange.max)}
                         placeholder="0"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black"
@@ -713,7 +713,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Maximum price</label>
                       <input
                         type="number"
-                        value={currentFilters.priceRange.max}
+                        value={currentFilters.priceRange?.max ?? 1000}
                         onChange={(e) => handlePriceRangeChange(currentFilters.priceRange.min, e.target.value)}
                         placeholder="1000"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black"
@@ -876,7 +876,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Minimum budget</label>
                       <input
                         type="number"
-                        value={(currentFilters.budget || {}).min || 0}
+                        value={currentFilters.budget?.min ?? 0}
                           onChange={(e) => handleFilterChange('budget', { 
                           ...(currentFilters.budget || {}), 
                           min: parseInt(e.target.value) || 0 
@@ -889,7 +889,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Maximum budget</label>
                       <input
                         type="number"
-                        value={(currentFilters.budget || {}).max || 10000}
+                        value={currentFilters.budget?.max ?? 10000}
                           onChange={(e) => handleFilterChange('budget', { 
                           ...(currentFilters.budget || {}), 
                           max: parseInt(e.target.value) || 10000 

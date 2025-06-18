@@ -34,6 +34,8 @@ import EditRentalForm from './components/EditRentalForm';
 import { GoogleMapsProvider } from './contexts/GoogleMapsProvider';
 import { AuthProvider } from './contexts/AuthContext';
 import RentalsMapPage from './pages/RentalsMapPage';
+import AddConciergeService from './pages/AddConciergeService';
+import DashboardConciergeServices from './pages/DashboardConciergeServices';
 
 const libraries = ['places', 'marker', 'maps'];
 
@@ -122,6 +124,16 @@ const AppContent = () => {
           } />
           <Route path="/rentals/edit/:id" element={<EditRentalForm />} />
           <Route path="/map" element={<RentalsMapPage />} />
+          <Route path="/add-concierge-service" element={
+            <ProtectedRoute>
+              <AddConciergeService />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/concierge-services" element={
+            <ProtectedRoute>
+              <DashboardConciergeServices />
+            </ProtectedRoute>
+          } />
         </Routes>
       </div>
       {!hideFooter && <Footer />}

@@ -101,8 +101,25 @@ export const bookingService = {
       if (!id) {
         throw new Error('Booking ID is required');
       }
-      const response = await api.get(`/service-requests/${id}`);
+      
+      // First try to get it as a service request
+      try {
+        const response = await api.get(`/service-requests/${id}`);
+        return response.data;
+      } catch (serviceError) {
+        // If service request fails, try as a rental booking
+        if (serviceError.response?.status === 404) {
+    try {
+      const response = await api.get(`/bookings/${id}`);
       return response.data;
+          } catch (bookingError) {
+            // If both fail, throw the original error
+            throw serviceError;
+          }
+        } else {
+          throw serviceError;
+        }
+      }
     } catch (error) {
       console.error('Error fetching booking:', error);
       throw error;
@@ -112,8 +129,10 @@ export const bookingService = {
   // Get all bookings for the current user
   getUserBookings: async () => {
     try {
+      console.log('Fetching user bookings from /bookings/user');
       const response = await api.get('/bookings/user');
-      return response.data;
+      console.log('User bookings response:', response.data);
+      return response.data.data || response.data || []; // Handle different response formats
     } catch (error) {
       console.error('Error fetching user bookings:', error);
       throw error;
@@ -199,8 +218,10 @@ export const bookingService = {
   // Get concierge service bookings for the current user
   getUserConciergeBookings: async () => {
     try {
+      console.log('Fetching concierge bookings from /service-requests/user');
       const response = await api.get('/service-requests/user');
-      return response.data;
+      console.log('Concierge bookings response:', response.data);
+      return response.data.data || response.data || []; // Handle different response formats
     } catch (error) {
       console.error('Error fetching user concierge bookings:', error);
       throw error;
@@ -225,6 +246,76 @@ export const bookingService = {
       return response.data;
     } catch (error) {
       console.error('Error canceling concierge booking:', error);
+      throw error;
+    }
+  },
+
+  // Get rental bookings for the current user (these are included in getUserBookings)
+  getUserRentalBookings: async () => {
+    try {
+      console.log('Fetching rental bookings from /bookings/user');
+      const response = await api.get('/bookings/user');
+      console.log('Rental bookings response:', response.data);
+      // Filter for rental bookings (those with rental_id)
+      const allBookings = response.data.data || response.data || [];
+      const rentalBookings = allBookings.filter(booking => booking.rental_id);
+      console.log('Filtered rental bookings:', rentalBookings);
+      return rentalBookings;
+    } catch (error) {
+      console.error('Error fetching user rental bookings:', error);
+      throw error;
+    }
+  },
+
+  // Cancel a rental booking
+  cancelRentalBooking: async (id) => {
+    try {
+      const response = await api.post(`/bookings/${id}/cancel`);
+      return response.data;
+    } catch (error) {
+      console.error('Error canceling rental booking:', error);
+      throw error;
+    }
+  },
+
+  // Get all user bookings (property, rental, and concierge) in one call
+  getAllUserBookings: async () => {
+    try {
+      console.log('Fetching all user bookings...');
+      
+      // Fetch all types of bookings in parallel
+      const [propertyBookings, conciergeData] = await Promise.all([
+        bookingService.getUserBookings().catch(err => {
+          console.error('Error fetching property bookings:', err);
+          return [];
+        }),
+        bookingService.getUserConciergeBookings().catch(err => {
+          console.error('Error fetching concierge bookings:', err);
+          return [];
+        })
+      ]);
+      
+      // Filter property bookings into property and rental
+      const propertyBookingsArray = Array.isArray(propertyBookings) ? propertyBookings : [];
+      const conciergeBookingsArray = Array.isArray(conciergeData) ? conciergeData : [];
+      
+      const rentalBookings = propertyBookingsArray.filter(booking => booking.rental_id);
+      const otherPropertyBookings = propertyBookingsArray.filter(booking => !booking.rental_id);
+      
+      console.log('All bookings fetched:', {
+        property: otherPropertyBookings.length,
+        rental: rentalBookings.length,
+        concierge: conciergeBookingsArray.length
+      });
+      
+      return {
+        property: otherPropertyBookings,
+        rental: rentalBookings,
+        concierge: conciergeBookingsArray,
+        all: [...otherPropertyBookings, ...rentalBookings, ...conciergeBookingsArray]
+      };
+    } catch (error) {
+      console.error('Error fetching all user bookings:', error);
       throw error;
     }
   }

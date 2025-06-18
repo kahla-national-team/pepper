@@ -6,12 +6,14 @@ import { FaHome, FaBed, FaBath, FaUsers, FaMapMarkerAlt } from 'react-icons/fa';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { propertyService } from '../services/propertyService';
 import axios from 'axios';
+import { useGoogleMaps } from '../contexts/GoogleMapsProvider';
 
 const FALLBACK_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM2YjcyODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
 
 const EditRentalForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { isLoaded: isGoogleMapsLoaded, loadError: googleMapsError } = useGoogleMaps();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -373,6 +375,20 @@ const EditRentalForm = () => {
                 Property Location
               </label>
               <div className="w-full h-[400px] rounded-lg overflow-hidden">
+                {!isGoogleMapsLoaded ? (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-gray-300 border-t-[#ff385c] rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-gray-500">Loading map...</p>
+                    </div>
+                  </div>
+                ) : googleMapsError ? (
+                  <div className="w-full h-full bg-red-50 flex items-center justify-center">
+                    <div className="text-center text-red-600">
+                      <p>Error loading map. Please refresh the page.</p>
+                    </div>
+                  </div>
+                ) : (
                 <GoogleMap
                   mapContainerStyle={containerStyle}
                   center={mapCenter}
@@ -398,6 +414,7 @@ const EditRentalForm = () => {
                     />
                   )}
                 </GoogleMap>
+                )}
               </div>
               <div className="mt-2 text-sm text-gray-500">
                 Click on the map to select your property location
