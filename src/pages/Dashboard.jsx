@@ -5,7 +5,7 @@ import SummaryCard from '../components/Dashboard/SummaryCard';
 import RecentActivity from '../components/Dashboard/RecentActivity';
 import WelcomeSection from '../components/Dashboard/WelcomeSection';
 import QuickActions from '../components/Dashboard/QuickActions';
-import ConciergeServices from '../components/dashboard/ConciergeServices';
+import DashboardConciergeServices from "../pages/DashboardConciergeServices";
 import ServiceAnnouncements from '../components/Dashboard/ServiceAnnouncements';
 import ConciergeServiceForm from '../components/ConciergeServiceForm';
 import { getDashboardStats } from '../services/dashboardService';

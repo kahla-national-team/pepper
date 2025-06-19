@@ -11,7 +11,7 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
       <div className="relative h-48 overflow-hidden">
         <img 
           src={service.photo_url || service.image} 
-          alt={service.name}
+          alt={service.name ? service.name : "Concierge service image"}
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
           onError={(e) => {
             e.target.onerror = null;
@@ -65,7 +65,7 @@ const ConciergeServices = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { user } = authService;
+  const [user] = useState(authService?.user || JSON.parse(localStorage.getItem('user')));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
 
@@ -75,7 +75,11 @@ const ConciergeServices = () => {
         setLoading(true);
         if (!user?.id) return;
         const response = await conciergeService.getMyServices();
-        if (response.success) {
+        if (Array.isArray(response)) {
+          setServices(response);
+        } else if (response.success) {
+          setServices(response.data);
+        } else if (response.data) {
           setServices(response.data);
         } else {
           setError(response.message || 'Failed to fetch services');
