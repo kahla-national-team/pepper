@@ -60,7 +60,7 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
   );
 };
 
-const ConciergeServices = ({ userId: propUserId }) => {
+const ConciergeServices = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,9 +73,8 @@ const ConciergeServices = ({ userId: propUserId }) => {
     const fetchServices = async () => {
       try {
         setLoading(true);
-        const userId = propUserId || user?.id;
-        const response = await conciergeService.getServicesByUserId(userId);
-        
+        if (!user?.id) return;
+        const response = await conciergeService.getMyServices();
         if (response.success) {
           setServices(response.data);
         } else {
@@ -88,10 +87,10 @@ const ConciergeServices = ({ userId: propUserId }) => {
       }
     };
 
-    if (user?.id || propUserId) {
+    if (user?.id) {
       fetchServices();
     }
-  }, [user?.id, propUserId]);
+  }, [user?.id]);
 
   const handleAddService = () => {
     setSelectedService(null);
@@ -133,13 +132,7 @@ const ConciergeServices = ({ userId: propUserId }) => {
   };
 
   if (loading) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff385c]"></div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (error) {
