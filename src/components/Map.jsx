@@ -39,7 +39,7 @@ const Map = ({ properties = [], center, zoom = 12, onMarkerClick }) => {
       // Add new markers
       properties.forEach(property => {
         if (property.latitude && property.longitude) {
-          const marker = new window.google.maps.Marker({
+          const marker = new window.google.maps.marker.AdvancedMarkerElement({
             position: { lat: property.latitude, lng: property.longitude },
             map: map,
             title: property.title

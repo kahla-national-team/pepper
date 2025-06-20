@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { FaMap, FaTimes } from 'react-icons/fa';
 import StaysCard from '../components/RENTALCard';
 import ServiceCard from '../components/ServiceCard';
 import RentalMap from '../components/RentalMap';
@@ -114,7 +115,7 @@ const Home = () => {
   const [servicesError, setServicesError] = useState(null);
   const [mapCenter, setMapCenter] = useState({ lat: 35.6971, lng: -0.6337 }); // Default to Oran, Algeria
 
-  const { isMapVisible } = useMapVisibility();
+  const { isMapVisible, setIsMapVisible } = useMapVisibility();
   const { activeMode } = useSearchMode();
 
   // Fetch stays data
@@ -168,10 +169,12 @@ const Home = () => {
         setIsServicesLoading(true);
         const response = await conciergeService.getAllServices();
         if (response.success) {
-          // Convert price to string format
+          // Convert price to string format and map name to title for ServiceCard
           const servicesWithStringPrice = response.data.map(service => ({
             ...service,
-            price: `$${service.price}/day`
+            title: service.name, // Map name to title for ServiceCard
+            price: `$${service.price}/day`,
+            type: service.type || 'concierge',
           }));
           setConciergeServices(servicesWithStringPrice);
         } else {
@@ -269,10 +272,27 @@ const Home = () => {
         filters={activeMode === 'stays' ? staysFilters : servicesFilters}
       />
 
+      {/* Map Toggle Button - Only show for stays mode */}
+      {activeMode === 'stays' && (
+        <div className="fixed bottom-4 right-4 z-40">
+          <button
+            onClick={() => setIsMapVisible(!isMapVisible)}
+            className="bg-white border border-gray-300 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+            aria-label={isMapVisible ? 'Hide map' : 'Show map'}
+          >
+            {isMapVisible ? (
+              <FaTimes className="w-5 h-5 text-gray-600" />
+            ) : (
+              <FaMap className="w-5 h-5 text-gray-600" />
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Main content */}
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className={`w-full transition-all duration-300 ${isMapVisible ? 'lg:w-1/2' : 'lg:w-full'}`}>
-          <main className="container mx-auto px-4 py-4 sm:py-8 pt-[200px]"> {/* Adjusted padding-top for navbar + search bar */}
+      <div className="flex min-h-screen">
+        <div className={`transition-all duration-300 ${isMapVisible ? 'lg:w-1/2 lg:pl-8' : 'w-full'}`}>
+          <main className={`py-4 sm:py-8 pt-[200px] ${isMapVisible ? 'pr-4' : 'container mx-auto px-4'}`}> {/* Adjusted padding-top for navbar + search bar */}
             {/* Stays Section - Only show when in stays mode */}
             {activeMode === 'stays' && (
               <Section
@@ -301,16 +321,18 @@ const Home = () => {
           </main>
         </div>
 
-        {/* Map Toggle Button and Map - Only show for stays */}
-        {activeMode === 'stays' && (
-          <MapToggleWrapper>
-            <RentalMap 
-              rentals={stays}
-              selectedRental={selectedStay}
-              onRentalSelect={handleStaySelect}
-              initialCenter={mapCenter}
-            />
-          </MapToggleWrapper>
+        {/* Map - Only show for stays when map is visible */}
+        {activeMode === 'stays' && isMapVisible && (
+          <div className="hidden lg:block lg:w-1/2 lg:pl-4 lg:pr-8">
+            <div className="sticky top-16 h-[calc(100vh-4rem)]">
+              <RentalMap 
+                rentals={stays}
+                selectedRental={selectedStay}
+                onRentalSelect={handleStaySelect}
+                initialCenter={mapCenter}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

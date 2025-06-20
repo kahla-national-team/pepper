@@ -81,14 +81,20 @@ const GoogleMap = ({ center, zoom, markers = [], onMarkerClick, className = '' }
 
     // Add new markers
     const newMarkers = markers.map(markerData => {
-      const marker = new window.google.maps.Marker({
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: markerData.position,
         map,
         title: markerData.title,
-        icon: markerData.icon || {
-          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-          scaledSize: new window.google.maps.Size(32, 32)
-        }
+        content: (() => {
+          if (markerData.icon) {
+            const img = document.createElement('img');
+            img.src = markerData.icon.url;
+            img.style.width = '32px';
+            img.style.height = '32px';
+            return img;
+          }
+          return undefined;
+        })()
       });
 
       if (onMarkerClick) {

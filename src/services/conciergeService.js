@@ -1,5 +1,6 @@
 import api from './api';
 import axios from 'axios';
+import { userService } from './userService';
 
 export const conciergeService = {
   // Create a new concierge service
@@ -83,12 +84,52 @@ export const conciergeService = {
     }
   },
 
+  // Get service details by ID
   getServiceDetails: async (id) => {
     try {
       const response = await api.get(`/concierge/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching service details:', error);
+      throw error;
+    }
+  },
+
+  // Get service with enhanced owner information
+  getServiceWithOwnerInfo: async (serviceId) => {
+    try {
+      const response = await api.get(`/concierge/${serviceId}`);
+      const service = response.data.data;
+      
+      // If service has owner_id but no provider info, fetch owner details
+      if (service.owner_id && !service.provider) {
+        try {
+          const ownerInfo = await userService.getOwnerInfo(service.owner_id);
+          service.provider = {
+            id: ownerInfo.id,
+            name: ownerInfo.full_name,
+            username: ownerInfo.username,
+            image: ownerInfo.profile_image,
+            rating: 5.0, // Default rating
+            reviewCount: 0 // Default review count
+          };
+        } catch (ownerError) {
+          console.error('Error fetching owner info:', ownerError);
+          // Use default provider info if fetch fails
+          service.provider = {
+            id: service.owner_id,
+            name: 'Service Provider',
+            username: 'provider',
+            image: '/placeholder-avatar.png',
+            rating: 5.0,
+            reviewCount: 0
+          };
+        }
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching service with owner info:', error);
       throw error;
     }
   }

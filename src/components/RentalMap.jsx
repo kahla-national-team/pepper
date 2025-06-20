@@ -122,17 +122,22 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
             markers: [],
             renderer: {
               render: ({ count, position }) => {
-                return new google.maps.Marker({
+                return new google.maps.marker.AdvancedMarkerElement({
                   position,
-                  label: { text: String(count), color: "white" },
-                  icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: "#ff385c",
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 2,
-                    scale: 20,
-                  },
+                  content: (() => {
+                    const div = document.createElement('div');
+                    div.style.background = '#ff385c';
+                    div.style.color = 'white';
+                    div.style.borderRadius = '50%';
+                    div.style.width = '40px';
+                    div.style.height = '40px';
+                    div.style.display = 'flex';
+                    div.style.alignItems = 'center';
+                    div.style.justifyContent = 'center';
+                    div.style.fontWeight = 'bold';
+                    div.textContent = String(count);
+                    return div;
+                  })(),
                 });
               },
             },
@@ -201,12 +206,15 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
 
   if (error) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
         <div className="text-center p-4">
           <p className="text-red-500 mb-2">{error}</p>
+          <p className="text-sm text-gray-600 mb-4">
+            This might be due to billing issues with Google Maps API or network problems.
+          </p>
           <button 
             onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-[#ff385c] text-white rounded-lg hover:bg-[#e31c5f] transition-colors"
           >
             Retry
           </button>
@@ -217,8 +225,40 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff385c] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no rentals with locations
+  if (!rentals || rentals.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
+        <div className="text-center p-4">
+          <p className="text-gray-600 mb-2">No rentals available</p>
+          <p className="text-sm text-gray-500">Try adjusting your search filters</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if any rentals have valid locations
+  const rentalsWithLocation = rentals.filter(rental => rental.location && 
+    typeof rental.location.lat === 'number' && 
+    typeof rental.location.lng === 'number'
+  );
+
+  if (rentalsWithLocation.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
+        <div className="text-center p-4">
+          <p className="text-gray-600 mb-2">No rentals with location data</p>
+          <p className="text-sm text-gray-500">Location information is required to display on map</p>
+        </div>
       </div>
     );
   }
@@ -229,8 +269,7 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
       className="w-full h-full bg-gray-100 rounded-lg shadow-lg"
       style={{ 
         minHeight: 'calc(100vh - 4rem)',
-        position: 'sticky',
-        top: '4rem'
+        height: 'calc(100vh - 4rem)'
       }}
     />
   );

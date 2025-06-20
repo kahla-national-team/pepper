@@ -25,11 +25,22 @@ const StaysCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initial
       reviewCount: 0,
       image: '/placeholder-avatar.png'
     },
+    // Handle backend data structure where provider info comes as direct properties
+    provider_name,
+    provider_image,
     image = '/placeholder-stay.jpg',
     bedrooms = 0,
     bathrooms = 0,
     max_guests = 1
   } = service;
+
+  // Use provider info from backend if available, otherwise use the provider object
+  const providerInfo = {
+    name: provider_name || provider?.name || 'Host',
+    rating: provider?.rating || 5,
+    reviewCount: provider?.reviewCount || 0,
+    image: provider_image || provider?.image || '/placeholder-avatar.png'
+  };
 
   // Add useEffect to check favorite status when component mounts
   useEffect(() => {
@@ -172,16 +183,16 @@ const StaysCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initial
         
         <div className="flex items-center pt-2 border-t border-gray-100">
           <img
-            src={provider.image}
-            alt={provider.name}
+            src={providerInfo.image}
+            alt={providerInfo.name}
             className="w-8 h-8 rounded-full mr-2"
           />
           <div>
-            <p className="text-sm font-medium text-gray-800">{provider.name}</p>
+            <p className="text-sm font-medium text-gray-800">{providerInfo.name}</p>
             <div className="flex items-center">
               <FaStar className="text-yellow-400 mr-1" />
               <span className="text-sm text-gray-600">
-                {provider.rating.toFixed(1)} ({provider.reviewCount} reviews)
+                {providerInfo.rating.toFixed(1)} ({providerInfo.reviewCount} reviews)
               </span>
             </div>
           </div>

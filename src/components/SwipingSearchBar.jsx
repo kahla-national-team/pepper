@@ -207,10 +207,11 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
       newGuests[type] = operation === 'add' ? newGuests[type] + 1 : Math.max(0, newGuests[type] - 1);
     }
 
-    setCurrentFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...currentFilters,
       guests: newGuests
-    }));
+    };
+    setCurrentFilters(newFilters);
 
     if (onFilterChange) {
       onFilterChange('guests', newGuests);
@@ -218,34 +219,41 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   };
 
   const handleStaysFilterChange = (type, value) => {
+    const newFilters = {
+      ...currentFilters,
+      [type]: value
+    };
+    setCurrentFilters(newFilters);
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        [type]: value
-      });
+      onFilterChange(newFilters);
     }
   };
 
   const handleDateChange = (type, value) => {
+    const newFilters = {
+      ...currentFilters,
+      dates: {
+        ...currentFilters.dates,
+        [type]: value
+      }
+    };
+    setCurrentFilters(newFilters);
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        dates: {
-          ...currentFilters.dates,
-          [type]: value
-        }
-      });
+      onFilterChange(newFilters);
     }
   };
 
   const handleDestinationChange = (e) => {
     const value = e.target.value;
     
+    const newFilters = {
+      ...currentFilters,
+      destination: value
+    };
+    setCurrentFilters(newFilters);
+    
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        destination: value
-      });
+      onFilterChange(newFilters);
     }
     
     if (value.trim()) {
@@ -263,11 +271,14 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   };
 
   const handleSuggestionClick = (suggestion) => {
+    const newFilters = {
+      ...currentFilters,
+      destination: suggestion.name
+    };
+    setCurrentFilters(newFilters);
+    
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        destination: suggestion.name
-      });
+      onFilterChange(newFilters);
     }
     setShowSuggestions(false);
     if (onSearch) onSearch(suggestion.name);
@@ -275,22 +286,28 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
 
   // Services mode handlers
   const handleServiceTypeChange = (type, value) => {
+    const newFilters = {
+      ...currentFilters,
+      [type]: value
+    };
+    setCurrentFilters(newFilters);
+    
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        [type]: value
-      });
+      onFilterChange(newFilters);
     }
   };
 
   const handleServiceChange = (e) => {
     const value = e.target.value;
     
+    const newFilters = {
+      ...currentFilters,
+      service: value
+    };
+    setCurrentFilters(newFilters);
+    
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        service: value
-      });
+      onFilterChange(newFilters);
     }
     
     if (value.trim()) {
@@ -308,11 +325,14 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   };
 
   const handleServiceSuggestionClick = (suggestion) => {
+    const newFilters = {
+      ...currentFilters,
+      service: suggestion.name
+    };
+    setCurrentFilters(newFilters);
+    
     if (onFilterChange) {
-      onFilterChange({
-        ...currentFilters,
-        service: suggestion.name
-      });
+      onFilterChange(newFilters);
     }
     setShowSuggestions(false);
     if (onSearch) onSearch(suggestion.name);
@@ -417,7 +437,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                 <input 
                   type="text" 
                   placeholder="Search destinations" 
-                  value={currentFilters.destination}
+                  value={currentFilters?.destination || ''}
                   onChange={handleDestinationChange}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
@@ -426,7 +446,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                     }
                   }}
                   onFocus={() => {
-                    if (currentFilters.destination.trim()) {
+                    if ((currentFilters?.destination || '').trim()) {
                       setShowSuggestions(true);
                     }
                   }}
@@ -457,7 +477,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                 <input 
                   type="date" 
                   min={new Date().toISOString().split('T')[0]}
-                  value={currentFilters.dates.checkIn || ''}
+                  value={currentFilters?.dates?.checkIn || ''}
                   onChange={(e) => handleDateChange('checkIn', e.target.value)}
                   className="w-full border-none outline-none text-sm text-gray-900 bg-transparent"
                 />
@@ -469,8 +489,8 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                 <label className="block text-xs font-semibold text-gray-900 mb-1">Check out</label>
                 <input 
                   type="date" 
-                  min={currentFilters.dates.checkIn || new Date().toISOString().split('T')[0]}
-                  value={currentFilters.dates.checkOut || ''}
+                  min={currentFilters?.dates?.checkIn || new Date().toISOString().split('T')[0]}
+                  value={currentFilters?.dates?.checkOut || ''}
                   onChange={(e) => handleDateChange('checkOut', e.target.value)}
                   className="w-full border-none outline-none text-sm text-gray-900 bg-transparent"
                 />
@@ -508,7 +528,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                           <input
                             type="number"
                             min="0"
-                            value={currentFilters.guests[type] || 0}
+                            value={currentFilters?.guests?.[type] || 0}
                             onChange={(e) => handleGuestCount(e, type, 'input')}
                             className="w-12 text-center border rounded"
                           />
@@ -556,7 +576,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                 <input 
                   type="text" 
                   placeholder="What service do you need?" 
-                  value={currentFilters.service}
+                  value={currentFilters?.service || ''}
                   onChange={handleServiceChange}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
@@ -565,7 +585,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                     }
                   }}
                   onFocus={() => {
-                    if (currentFilters.service.trim()) {
+                    if ((currentFilters?.service || '').trim()) {
                       setShowSuggestions(true);
                     }
                   }}
@@ -596,7 +616,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                 <input 
                   type="datetime-local" 
                   min={new Date().toISOString().slice(0, 16)}
-                  value={currentFilters.when || ''}
+                  value={currentFilters?.when || ''}
                   onChange={(e) => handleServiceTypeChange('when', e.target.value)}
                   className="w-full border-none outline-none text-sm text-gray-900 bg-transparent"
                 />

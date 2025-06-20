@@ -10,7 +10,7 @@ const ServiceCard = ({ service, onEdit, onDelete }) => {
     <div className="bg-white rounded-2xl border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden group">
       <div className="relative h-48 overflow-hidden">
         <img 
-          src={service.photo_url || service.image} 
+          src={service.photo_url ? service.photo_url : 'https://images.unsplash.com/photo-1555215695-300b0ca6ba4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'}
           alt={service.name ? service.name : "Concierge service image"}
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
           onError={(e) => {

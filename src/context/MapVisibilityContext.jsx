@@ -4,7 +4,7 @@ import { createContext, useContext, useState } from 'react';
 const MapVisibilityContext = createContext();
 
 export function MapVisibilityProvider({ children }) {
-  const [isMapVisible, setIsMapVisible] = useState(false);
+  const [isMapVisible, setIsMapVisible] = useState(true);
 
   return (
     <MapVisibilityContext.Provider value={{ isMapVisible, setIsMapVisible }}>

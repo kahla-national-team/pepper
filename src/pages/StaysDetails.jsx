@@ -24,22 +24,47 @@ const StaysDetails = () => {
     averageRating: 0
   });
 
-  useEffect(() => {
     const fetchStayDetails = async () => {
       try {
         setLoading(true);
+      
+      // Fetch stay details
         const data = await rentalService.getRental(id);
         console.log('StaysDetails - fetched stay data:', data);
         setStay(data);
         
         // Fetch reviews for this stay
-        const reviewsData = await rentalService.getRentalReviews(id);
-        setReviews(reviewsData);
+      try {
+        const reviewsResponse = await reviewService.getRentalReviews(id);
+        if (reviewsResponse.success) {
+          setReviews(reviewsResponse.data || []);
+        } else {
+          console.warn('Failed to fetch reviews:', reviewsResponse.message);
+          setReviews([]);
+        }
+      } catch (reviewError) {
+        console.error('Error fetching reviews:', reviewError);
+        setReviews([]);
+      }
         
         // Fetch review statistics
+      try {
         const statsResponse = await reviewService.getItemReviewStats(id, 'rental');
         if (statsResponse.success) {
           setReviewStats(statsResponse.data);
+        } else {
+          console.warn('Failed to fetch review stats:', statsResponse.message);
+          setReviewStats({
+            totalReviews: 0,
+            averageRating: 0
+          });
+        }
+      } catch (statsError) {
+        console.error('Error fetching review stats:', statsError);
+        setReviewStats({
+          totalReviews: 0,
+          averageRating: 0
+        });
         }
         
         setError(null);
@@ -51,6 +76,7 @@ const StaysDetails = () => {
       }
     };
 
+  useEffect(() => {
     fetchStayDetails();
   }, [id]);
 
@@ -132,6 +158,34 @@ const StaysDetails = () => {
     setShowBookingForm(false);
   };
 
+  // Calculate review statistics
+  const calculateReviewStats = () => {
+    if (!reviews || reviews.length === 0) {
+      return {
+        totalReviews: 0,
+        averageRating: 0,
+        ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      };
+    }
+
+    const totalReviews = reviews.length;
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = totalRating / totalReviews;
+
+    const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    reviews.forEach(review => {
+      ratingDistribution[review.rating] = (ratingDistribution[review.rating] || 0) + 1;
+    });
+
+    return {
+      totalReviews,
+      averageRating,
+      ratingDistribution
+    };
+  };
+
+  const reviewStatsCalculated = calculateReviewStats();
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -178,7 +232,7 @@ const StaysDetails = () => {
                       <FaStar
                         key={index}
                         className={`${
-                          index < Math.round(reviewStats.averageRating)
+                          index < Math.round(reviewStatsCalculated.averageRating)
                             ? 'text-yellow-400'
                             : 'text-gray-300'
                         } w-5 h-5`}
@@ -186,11 +240,11 @@ const StaysDetails = () => {
                     ))}
                   </div>
                   <span className="ml-2 font-semibold text-gray-900">
-                    {reviewStats.averageRating.toFixed(1)}
+                    {reviewStatsCalculated.averageRating.toFixed(1)}
                 </span>
                 </div>
                 <p className="text-gray-600 text-sm">
-                  {reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? 'review' : 'reviews'}
+                  {reviewStatsCalculated.totalReviews} {reviewStatsCalculated.totalReviews === 1 ? 'review' : 'reviews'}
                 </p>
               </div>
             </div>
@@ -226,6 +280,114 @@ const StaysDetails = () => {
                 </div>
               </div>
             </div>
+
+            {/* Detailed Review Summary */}
+            {reviewStatsCalculated.totalReviews > 0 && (
+              <div className="mb-8 p-6 bg-white border border-gray-200 rounded-lg">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Review Summary</h2>
+                    <div className="flex items-center mb-4">
+                      <div className="flex items-center mr-4">
+                        {[...Array(5)].map((_, index) => (
+                          <FaStar
+                            key={index}
+                            className={`${
+                              index < Math.round(reviewStatsCalculated.averageRating)
+                                ? 'text-yellow-400'
+                                : 'text-gray-300'
+                            } w-5 h-5`}
+                          />
+                        ))}
+                      </div>
+                      <div>
+                        <span className="text-2xl font-bold text-gray-900">
+                          {reviewStatsCalculated.averageRating.toFixed(1)}
+                        </span>
+                        <span className="text-gray-600 ml-1">out of 5</span>
+                      </div>
+                    </div>
+                    <p className="text-gray-600">
+                      Based on {reviewStatsCalculated.totalReviews} {reviewStatsCalculated.totalReviews === 1 ? 'review' : 'reviews'}
+                    </p>
+                  </div>
+                  
+                  {/* Rating Distribution */}
+                  <div className="mt-4 md:mt-0 md:ml-8">
+                    <h3 className="font-medium text-gray-900 mb-3">Rating Distribution</h3>
+                    <div className="space-y-2">
+                      {[5, 4, 3, 2, 1].map((rating) => {
+                        const count = reviewStatsCalculated.ratingDistribution[rating] || 0;
+                        const percentage = reviewStatsCalculated.totalReviews > 0 ? (count / reviewStatsCalculated.totalReviews) * 100 : 0;
+                        return (
+                          <div key={rating} className="flex items-center">
+                            <span className="text-sm text-gray-600 w-8">{rating}★</span>
+                            <div className="flex-1 mx-2 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-yellow-400 h-2 rounded-full"
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm text-gray-600 w-8">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Reviews Preview */}
+                {reviews.length > 0 && (
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="font-medium text-gray-900 mb-4">Recent Reviews</h3>
+                    <div className="space-y-4">
+                      {reviews.slice(0, 3).map((review) => (
+                        <div key={review.id} className="border border-gray-100 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-full bg-gray-200 mr-3 flex items-center justify-center">
+                                {review.user_image ? (
+                                  <img
+                                    src={review.user_image}
+                                    alt={review.user_name}
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium text-gray-600">
+                                    {review.user_name?.charAt(0) || 'U'}
+                                  </span>
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{review.user_name || 'Anonymous'}</p>
+                                <div className="flex items-center">
+                                  {renderStars(review.rating)}
+                                  <span className="text-sm text-gray-500 ml-2">
+                                    {formatDate(review.created_at)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {review.comment && (
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                              "{review.comment}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {reviews.length > 3 && (
+                      <div className="text-center mt-4">
+                        <p className="text-sm text-gray-500">
+                          Showing 3 of {reviews.length} reviews
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Description */}
             <div className="mb-8">
@@ -333,23 +495,13 @@ const StaysDetails = () => {
                   itemId={id} 
                   itemType="rental" 
                   currentUser={user}
-                  onReviewSubmit={() => {
-                    fetchStayDetails();
-                  }}
+                  onReviewSubmit={fetchStayDetails}
                 />
               </div>
 
               {/* Existing Reviews */}
               <div className="space-y-6">
-              <Review 
-                itemId={id} 
-                itemType="rental" 
-                currentUser={user}
-                  onReviewSubmit={() => {
-                    fetchStayDetails();
-                  }}
-                  showReviewForm={false}
-              />
+                {/* Reviews will be shown by the Review component above */}
               </div>
             </div>
 
@@ -357,7 +509,7 @@ const StaysDetails = () => {
             <div className="mt-8 p-6 bg-gray-50 rounded-lg">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-[#ff385c]">${stay.price}</p>
+                  <p className="text-2xl font-bold text-[#ff385c]">DZD{stay.price}</p>
                   <p className="text-gray-600">per night</p>
                 </div>
                 {!showBookingForm ? (

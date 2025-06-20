@@ -15,4 +15,7 @@ router.post('/', auth, reviewController.createReview);
 router.put('/:reviewId', auth, reviewController.updateReview);
 router.delete('/:reviewId', auth, reviewController.deleteReview);
 
+// Admin routes (optional - for future admin panel)
+// router.get('/', auth, reviewController.getAllReviews); // Uncomment if needed
+
 module.exports = router; 

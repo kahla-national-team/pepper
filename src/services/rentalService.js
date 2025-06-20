@@ -1,4 +1,5 @@
 import api from './api';
+import { userService } from './userService';
 
 export const rentalService = {
   createRental: async (rentalData) => {
@@ -78,6 +79,45 @@ export const rentalService = {
     } catch (error) {
       console.error('Get rental locations error:', error);
       throw error.response?.data || { message: 'An error occurred while fetching rental locations' };
+    }
+  },
+
+  // Get rental with enhanced owner information
+  getRentalWithOwnerInfo: async (rentalId) => {
+    try {
+      const response = await api.get(`/rentals/${rentalId}`);
+      const rental = response.data;
+      
+      // If rental has owner_id but no provider info, fetch owner details
+      if (rental.owner_id && !rental.provider) {
+        try {
+          const ownerInfo = await userService.getOwnerInfo(rental.owner_id);
+          rental.provider = {
+            id: ownerInfo.id,
+            name: ownerInfo.full_name,
+            username: ownerInfo.username,
+            image: ownerInfo.profile_image,
+            rating: 5.0, // Default rating
+            reviewCount: 0 // Default review count
+          };
+        } catch (ownerError) {
+          console.error('Error fetching owner info:', ownerError);
+          // Use default provider info if fetch fails
+          rental.provider = {
+            id: rental.owner_id,
+            name: 'Property Owner',
+            username: 'owner',
+            image: '/placeholder-avatar.png',
+            rating: 5.0,
+            reviewCount: 0
+          };
+        }
+      }
+      
+      return rental;
+    } catch (error) {
+      console.error('Error fetching rental with owner info:', error);
+      throw error;
     }
   }
 }; 

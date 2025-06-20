@@ -17,7 +17,7 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
   const {
     id,
     type,
-    title,
+    title = 'Service Title',
     description,
     price,
     category,
@@ -90,7 +90,7 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
   return (
     <motion.div 
       className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer h-full ${
-        isSelected ? 'ring-2 ring-blue-500' : ''
+        isSelected ? 'ring-2 ring-[#ff385c]' : ''
       }`}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
@@ -110,7 +110,7 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
         />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff385c]"></div>
           </div>
         )}
         {hasError && (
@@ -119,7 +119,7 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
           </div>
         )}
         {category && (
-          <div className="absolute top-2 lef bg-blue-500 text-white px-2 py-1 rounded-full text-sm">
+          <div className="absolute top-2 left-2 bg-[#ff385c] text-white px-2 py-1 rounded-full text-sm font-medium">
             {category}
           </div>
         )}
@@ -140,33 +140,89 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
       </div>
       
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
-        <p className="text-gray-600 text-sm mb-2 line-clamp-2">{description}</p>
-        
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[#ff385c] font-bold">{price}</span>
-          {duration && (
-            <div className="flex items-center text-gray-500 text-sm">
-              <FaClock className="mr-1" />
-              <span>{duration} min</span>
-            </div>
-          )}
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+          <span className="text-[#ff385c] font-semibold">{price}</span>
         </div>
-
-        {provider && (
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <div className="flex items-center">
+        
+        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{description}</p>
+        
+        {/* Service Details */}
+        <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
+          <div className="flex items-center">
+            <FaClock className="mr-1" />
+            <span>{duration || 'Flexible'} min</span>
+          </div>
+          <div className="flex items-center">
+            <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
+              {category || 'Service'}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+              Available
+            </span>
+          </div>
+        </div>
+        
+        {provider ? (
+          <div className="flex items-center pt-3 border-t border-gray-100">
+            <div className="flex items-center flex-1">
               <img
-                src={provider.image}
+                src={provider.image || '/placeholder-avatar.png'}
                 alt={provider.name}
-                className="w-6 h-6 rounded-full mr-2"
+                className="w-10 h-10 rounded-full mr-3 border-2 border-gray-200"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/placeholder-avatar.png';
+                }}
               />
-              <span className="text-sm text-gray-600">{provider.name}</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">{provider.name}</p>
+                {provider.username && (
+                  <p className="text-xs text-gray-500">@{provider.username}</p>
+                )}
+                <div className="flex items-center mt-1">
+                  <FaStar className="text-yellow-400 mr-1 text-xs" />
+                  <span className="text-sm text-gray-600 font-medium">
+                    {provider.rating.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-gray-500 ml-1">
+                    ({provider.reviewCount} reviews)
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center">
-              <FaStar className="text-yellow-400 mr-1" />
-              <span className="text-sm text-gray-600">{provider.rating.toFixed(1)}</span>
-              <span className="text-sm text-gray-400 ml-1">({provider.reviewCount})</span>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Service Provider</div>
+              <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                Verified
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center pt-3 border-t border-gray-100">
+            <div className="flex items-center flex-1">
+              <img
+                src="/placeholder-avatar.png"
+                alt="Provider"
+                className="w-10 h-10 rounded-full mr-3 border-2 border-gray-200"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">Service Provider</p>
+                <p className="text-xs text-gray-500">Professional service</p>
+                <div className="flex items-center mt-1">
+                  <FaStar className="text-yellow-400 mr-1 text-xs" />
+                  <span className="text-sm text-gray-600 font-medium">5.0</span>
+                  <span className="text-xs text-gray-500 ml-1">(New)</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Provider</div>
+              <div className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">
+                New
+              </div>
             </div>
           </div>
         )}
@@ -179,14 +235,16 @@ ServiceCard.propTypes = {
   service: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     type: PropTypes.string.isRequired,
-    title: PropTypes.string.isRequired,
+    title: PropTypes.string,
     description: PropTypes.string,
     price: PropTypes.string,
     category: PropTypes.string,
     duration: PropTypes.number,
     image: PropTypes.string,
     provider: PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       name: PropTypes.string,
+      username: PropTypes.string,
       rating: PropTypes.number,
       reviewCount: PropTypes.number,
       image: PropTypes.string

@@ -281,12 +281,8 @@ const Calendar = () => {
                 <FaHome className="text-[#ff385c] text-xl" />
                 <span className="font-medium">{view === 'calendar' ? 'View Properties' : 'View Calendar'}</span>
               </button>
-              {view === 'calendar' && (
-                <button className="flex items-center space-x-3 bg-gradient-to-r from-[#ff385c] to-[#ff385c]/90 text-white px-6 py-3.5 rounded-2xl hover:from-[#ff385c]/90 hover:to-[#ff385c]/80 transition-all transform hover:scale-[1.02] shadow-lg hover:shadow-xl">
-                  <FaPlus className="text-xl" />
-                  <span className="font-medium">Add Booking</span>
-                </button>
-              )}
+              
+             
             </div>
           </div>
 
