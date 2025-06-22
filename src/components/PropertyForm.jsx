@@ -3,17 +3,17 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import FormInput from './FormInput';
 import Button from './Button';
 import { FaHome, FaBed, FaBath, FaUsers, FaMapMarkerAlt } from 'react-icons/fa';
-import { GoogleMap, Marker } from '@react-google-maps/api';
+import OpenStreetMap from './OpenStreetMap';
 import { propertyService } from '../services/propertyService';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { useGoogleMaps } from '../contexts/GoogleMapsProvider';
+import { useOpenStreetMap } from '../contexts/OpenStreetMapProvider';
 
 const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { isLoaded: isGoogleMapsLoaded, loadError: googleMapsError } = useGoogleMaps();
+  const { isLoaded: isOpenStreetMapLoaded, loadError: openStreetMapError } = useOpenStreetMap();
   const isAdmin = location.pathname.includes('/admin');
   const [formData, setFormData] = useState({
     title: '',
@@ -39,11 +39,6 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
   const [serverError, setServerError] = useState('');
   const [previewUrl, setPreviewUrl] = useState(initialData.image || null);
   const fileInputRef = useRef(null);
-
-  const [mapCenter, setMapCenter] = useState({
-    lat: 0,
-    lng: 0
-  });
 
   const [selectedLocation, setSelectedLocation] = useState(null);
 
@@ -71,28 +66,6 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
     'Workspace'
   ];
 
-  // Initialize map with user's current location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setMapCenter({ lat: latitude, lng: longitude });
-          setFormData(prev => ({
-            ...prev,
-            latitude: latitude.toString(),
-            longitude: longitude.toString()
-          }));
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          // Default to a fallback location if geolocation fails
-          setMapCenter({ lat: 0, lng: 0 });
-        }
-      );
-    }
-  }, []);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -118,34 +91,13 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
     }));
   };
 
-  // Function to reverse geocode lat/lng to address
-  const fetchAddressFromLatLng = async (lat, lng) => {
-    try {
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-      const response = await axios.get(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`
-      );
-      if (response.data.results && response.data.results.length > 0) {
-        return response.data.results[0].formatted_address;
-      }
-      return '';
-    } catch (error) {
-      console.error('Error fetching address:', error);
-      return '';
-    }
-  };
-
-  const handleMapClick = async (event) => {
-    const lat = event.latLng.lat();
-    const lng = event.latLng.lng();
+  const handleMapClick = (event) => {
+    const { lat, lng } = event.latlng;
     setSelectedLocation({ lat, lng });
-    // Fetch address from lat/lng
-    const address = await fetchAddressFromLatLng(lat, lng);
     setFormData(prev => ({
       ...prev,
       latitude: lat.toString(),
-      longitude: lng.toString(),
-      address: address || prev.address
+      longitude: lng.toString()
     }));
   };
 
@@ -268,38 +220,19 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
     }
   };
 
-  const mapContainerStyle = {
-    width: '100%',
-    height: '400px',
-    borderRadius: '0.75rem',
-    marginBottom: '1rem'
-  };
+  const amenities = [
+    'WiFi', 'Kitchen', 'Free parking', 'Air conditioning', 'Heating',
+    'Washer', 'Dryer', 'TV', 'Pool', 'Gym', 'Pet friendly', 'Balcony'
+  ];
 
-  const containerStyle = {
-    width: '100%',
-    height: '400px',
-    borderRadius: '0.75rem',
-    overflow: 'hidden'
-  };
+  const center = selectedLocation 
+    ? [selectedLocation.lat, selectedLocation.lng]
+    : [40.7128, -74.0060]; // Default to NYC
 
-  const center = {
-    lat: Number(formData.latitude) || 0,
-    lng: Number(formData.longitude) || 0
-  };
-
-  const marker = selectedLocation;
-
-  const onLoad = (map) => {
-    // This function is called when the map is fully loaded
-  };
-
-  const onUnmount = () => {
-    // This function is called when the map is unmounted
-  };
-
-  const onMapClick = (event) => {
-    handleMapClick(event);
-  };
+  const markers = selectedLocation ? [{
+    position: [selectedLocation.lat, selectedLocation.lng],
+    title: 'Selected Location'
+  }] : [];
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -404,30 +337,28 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
                 Property Location
               </label>
               <div className="w-full h-[400px] rounded-lg overflow-hidden">
-                {!isGoogleMapsLoaded ? (
+                {!isOpenStreetMapLoaded ? (
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                     <div className="text-center">
                       <div className="w-8 h-8 border-2 border-gray-300 border-t-[#ff385c] rounded-full animate-spin mx-auto mb-2"></div>
                       <p className="text-gray-500">Loading map...</p>
                     </div>
                   </div>
-                ) : googleMapsError ? (
+                ) : openStreetMapError ? (
                   <div className="w-full h-full bg-red-50 flex items-center justify-center">
                     <div className="text-center text-red-600">
                       <p>Error loading map. Please refresh the page.</p>
                     </div>
                   </div>
                 ) : (
-                <GoogleMap
-                  mapContainerStyle={containerStyle}
+                <OpenStreetMap
                   center={center}
-                  zoom={15}
-                  onLoad={onLoad}
-                  onUnmount={onUnmount}
-                  onClick={onMapClick}
-                >
-                  {marker && <Marker position={marker} />}
-                </GoogleMap>
+                  zoom={10}
+                  markers={markers}
+                  onMapClick={handleMapClick}
+                  height="400px"
+                  width="100%"
+                />
                 )}
               </div>
               <div className="mt-2 text-sm text-gray-500">
@@ -536,7 +467,7 @@ const PropertyForm = ({ initialData = {}, onSubmit, isEditing = false }) => {
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-xl font-semibold mb-4">Amenities</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {amenitiesList.map(amenity => (
+                {amenities.map(amenity => (
                   <label key={amenity} className="flex items-center space-x-2">
                     <input
                       type="checkbox"

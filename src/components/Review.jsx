@@ -10,6 +10,7 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isReviewFormVisible, setIsReviewFormVisible] = useState(false);
+  const [userHasReviewed, setUserHasReviewed] = useState(false);
   const [newReview, setNewReview] = useState({
     rating: 5,
     comment: '',
@@ -34,6 +35,12 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
       
       if (response.success) {
         setReviews(response.data || []);
+        
+        // Check if current user has already reviewed
+        if (user) {
+          const userReview = response.data?.find(review => review.user_id === user.id);
+          setUserHasReviewed(!!userReview);
+        }
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -51,7 +58,7 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
       const reviewData = {
         rating: Number(newReview.rating),
         comment: newReview.comment,
-        ...(itemType === 'rental' ? { rental_id: Number(itemId) } : {})
+        ...(itemType === 'rental' ? { rental_id: Number(itemId) } : { service_id: Number(itemId) })
       };
 
       try {
@@ -74,6 +81,8 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
         console.error('Error submitting review:', error);
         if (error.response?.status === 401) {
           alert('Please log in to submit a review');
+        } else if (error.response?.status === 409) {
+          alert('You have already reviewed this item. You can only submit one review per item.');
         } else {
           alert('Failed to submit review. Please try again.');
         }
@@ -130,8 +139,15 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">Write a Review</h3>
-              <p className="text-sm text-gray-500 mt-1">Share your experience with others</p>
+              <h3 className="text-xl font-semibold text-gray-900">
+                {userHasReviewed ? 'You have already reviewed this item' : 'Write a Review'}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {userHasReviewed 
+                  ? 'You can only submit one review per item.' 
+                  : 'Share your experience with others'
+                }
+              </p>
             </div>
             {user && (
               <div className="flex items-center space-x-3">
@@ -151,6 +167,14 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
             )}
           </div>
 
+          {userHasReviewed ? (
+            <div className="text-center py-8">
+              <div className="text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="font-medium">You have already submitted a review for this item.</p>
+                <p className="text-sm mt-1">You can only submit one review per item.</p>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmitReview} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
@@ -226,6 +250,7 @@ const Review = ({ itemId, itemType, onReviewSubmit, showReviewForm = true }) => 
               </button>
             </div>
           </form>
+          )}
         </motion.div>
       )}
 

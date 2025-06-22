@@ -67,7 +67,9 @@ const conciergeController = {
   // Get all active concierge services (public route)
   getAllServices: async (req, res) => {
     try {
-      const query = `
+      const { name, category, priceRange, rating } = req.query;
+      
+      let query = `
         SELECT 
           cs.*,
           u.id as provider_id,
@@ -90,11 +92,40 @@ const conciergeController = {
            GROUP BY service_id) rev ON cs.id = rev.service_id
         WHERE 
           cs.is_active = true 
-        ORDER BY 
-          cs.created_at DESC
       `;
       
-      const result = await req.app.locals.pool.query(query);
+      const queryParams = [];
+      const conditions = [];
+      
+      // Add search conditions
+      if (name && name.trim()) {
+        conditions.push(`(cs.name ILIKE $${queryParams.length + 1} OR cs.description ILIKE $${queryParams.length + 1})`);
+        queryParams.push(`%${name}%`);
+      }
+      
+      if (category && category.trim()) {
+        conditions.push(`cs.category ILIKE $${queryParams.length + 1}`);
+        queryParams.push(`%${category}%`);
+      }
+      
+      if (priceRange) {
+        if (priceRange.min && priceRange.min > 0) {
+          conditions.push(`cs.price >= $${queryParams.length + 1}`);
+          queryParams.push(parseFloat(priceRange.min));
+        }
+        if (priceRange.max && priceRange.max > 0) {
+          conditions.push(`cs.price <= $${queryParams.length + 1}`);
+          queryParams.push(parseFloat(priceRange.max));
+        }
+      }
+      
+      if (conditions.length > 0) {
+        query += ' AND ' + conditions.join(' AND ');
+      }
+      
+      query += ` ORDER BY cs.created_at DESC`;
+      
+      const result = await req.app.locals.pool.query(query, queryParams);
       
       // Transform the data to include provider information
       const servicesWithProvider = result.rows.map(row => ({
@@ -109,9 +140,17 @@ const conciergeController = {
         }
       }));
       
+      // Filter by rating if specified (after query since it's an aggregate)
+      let filteredServices = servicesWithProvider;
+      if (rating && rating > 0) {
+        filteredServices = servicesWithProvider.filter(service => 
+          service.provider.rating >= parseFloat(rating)
+        );
+      }
+      
       res.status(200).json({
         success: true,
-        data: servicesWithProvider.map(addBaseUrlToPhotoUrl)
+        data: filteredServices.map(addBaseUrlToPhotoUrl)
       });
     } catch (error) {
       console.error('Error fetching all concierge services:', error);
@@ -157,6 +196,7 @@ const conciergeController = {
           cs.description,
           cs.price,
           cs.duration_minutes,
+          cs.photo_url,
           p.id as provider_id,
           p.full_name as provider_name,
           p.email as provider_email,
@@ -198,6 +238,7 @@ const conciergeController = {
         details: service.description,
         price: service.price,
         duration: service.duration_minutes,
+        photo_url: service.photo_url,
         image: imageUrl, // Use the constructed URL
         // The following fields do not exist in the database, so they are removed.
         // features: [], 

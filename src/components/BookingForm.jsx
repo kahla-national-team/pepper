@@ -231,6 +231,7 @@ const BookingForm = ({ item, onSuccess, onCancel }) => {
           <ServiceSelection
             onServicesChange={handleServicesChange}
             selectedServices={selectedServices}
+            providerId={item.owner_id || (item.provider && item.provider.id)}
           />
 
           {/* Price Breakdown */}

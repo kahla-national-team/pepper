@@ -399,9 +399,7 @@ const StaysDetails = () => {
             {stay.location && (
               <div className="mb-8">
                 <RentalLocationMap 
-                  location={stay.location}
-                  address={stay.address}
-                  title={stay.title}
+                  rentalId={id}
                 />
               </div>
             )}

@@ -67,7 +67,7 @@ export const conciergeService = {
   },
 
   // Get all concierge services
-  getAllServices: async () => {
+  getAllServices: async (filters = {}) => {
     try {
       // Create a new axios instance without auth interceptor for public access
       const publicApi = axios.create({
@@ -76,7 +76,17 @@ export const conciergeService = {
           'Accept': 'application/json'
         }
       });
-      const response = await publicApi.get('/concierge/all');
+      
+      // Build query parameters from filters
+      const params = {};
+      if (filters.name) params.name = filters.name;
+      if (filters.category) params.category = filters.category;
+      if (filters.priceRange) {
+        params.priceRange = filters.priceRange;
+      }
+      if (filters.rating) params.rating = filters.rating;
+      
+      const response = await publicApi.get('/concierge/all', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching services:', error);

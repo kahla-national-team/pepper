@@ -110,11 +110,11 @@ class ReportsController {
         )
         SELECT 
           COALESCE(SUM(b.total_amount), 0) as total_earnings,
-          COALESCE(SUM(CASE WHEN b.payment_status = 'paid' THEN b.total_amount ELSE 0 END), 0) as paid_earnings,
-          COALESCE(SUM(CASE WHEN b.payment_status = 'pending' THEN b.total_amount ELSE 0 END), 0) as pending_payouts,
+          COALESCE(SUM(CASE WHEN b.status = 'completed' THEN b.total_amount ELSE 0 END), 0) as paid_earnings,
+          COALESCE(SUM(CASE WHEN b.status = 'pending' THEN b.total_amount ELSE 0 END), 0) as pending_payouts,
           COALESCE(AVG(b.total_amount), 0) as average_booking_value,
           COUNT(*) as total_bookings,
-          COUNT(CASE WHEN b.payment_status = 'paid' THEN 1 END) as paid_bookings
+          COUNT(CASE WHEN b.status = 'completed' THEN 1 END) as paid_bookings
         FROM bookings b
         JOIN rentals r ON b.rental_id = r.id
         CROSS JOIN date_range dr
@@ -399,11 +399,15 @@ class ReportsController {
 
   async getComprehensiveReport(req, res) {
     try {
-      const userId = req.user.id;
+      let userId = null;
+      if (req.user && req.user.id) {
+        userId = req.user.id;
+      }
       const timeRange = req.query.timeRange || 'month';
 
       // Property stats
-      const propertyQuery = `
+      const propertyQuery = userId
+        ? `
         SELECT 
           COUNT(*) as total_listed,
           COUNT(CASE WHEN is_active = true THEN 1 END) as active_listings,
@@ -412,10 +416,20 @@ class ReportsController {
           AVG(rating) as average_rating
         FROM rentals 
         WHERE owner_id = $1
+      `
+        : `
+        SELECT 
+          COUNT(*) as total_listed,
+          COUNT(CASE WHEN is_active = true THEN 1 END) as active_listings,
+          COUNT(CASE WHEN is_available = true THEN 1 END) as available_listings,
+          AVG(price) as average_price,
+          AVG(rating) as average_rating
+        FROM rentals
       `;
 
       // Financial stats
-      const financialQuery = `
+      const financialQuery = userId
+        ? `
         WITH date_range AS (
           SELECT 
             CASE 
@@ -428,19 +442,46 @@ class ReportsController {
         )
         SELECT 
           COALESCE(SUM(b.total_amount), 0) as total_earnings,
-          COALESCE(SUM(CASE WHEN b.payment_status = 'paid' THEN b.total_amount ELSE 0 END), 0) as paid_earnings,
-          COALESCE(SUM(CASE WHEN b.payment_status = 'pending' THEN b.total_amount ELSE 0 END), 0) as pending_payouts,
-          COALESCE(AVG(b.total_amount), 0) as average_booking_value
+          COALESCE(SUM(CASE WHEN b.status = 'completed' THEN b.total_amount ELSE 0 END), 0) as paid_earnings,
+          COALESCE(SUM(CASE WHEN b.status = 'pending' THEN b.total_amount ELSE 0 END), 0) as pending_payouts,
+          COALESCE(AVG(b.total_amount), 0) as average_booking_value,
+          COUNT(*) as total_bookings,
+          COUNT(CASE WHEN b.status = 'completed' THEN 1 END) as paid_bookings
         FROM bookings b
         JOIN rentals r ON b.rental_id = r.id
         CROSS JOIN date_range dr
         WHERE r.owner_id = $1
         AND b.created_at >= dr.start_date
         AND b.created_at <= dr.end_date
+      `
+        : `
+        WITH date_range AS (
+          SELECT 
+            CASE 
+              WHEN $1 = 'week' THEN CURRENT_DATE - INTERVAL '7 days'
+              WHEN $1 = 'month' THEN CURRENT_DATE - INTERVAL '30 days'
+              WHEN $1 = 'year' THEN CURRENT_DATE - INTERVAL '365 days'
+              ELSE CURRENT_DATE - INTERVAL '30 days'
+            END as start_date,
+            CURRENT_DATE as end_date
+        )
+        SELECT 
+          COALESCE(SUM(b.total_amount), 0) as total_earnings,
+          COALESCE(SUM(CASE WHEN b.status = 'completed' THEN b.total_amount ELSE 0 END), 0) as paid_earnings,
+          COALESCE(SUM(CASE WHEN b.status = 'pending' THEN b.total_amount ELSE 0 END), 0) as pending_payouts,
+          COALESCE(AVG(b.total_amount), 0) as average_booking_value,
+          COUNT(*) as total_bookings,
+          COUNT(CASE WHEN b.status = 'completed' THEN 1 END) as paid_bookings
+        FROM bookings b
+        JOIN rentals r ON b.rental_id = r.id
+        CROSS JOIN date_range dr
+        WHERE b.created_at >= dr.start_date
+        AND b.created_at <= dr.end_date
       `;
 
       // Booking stats
-      const bookingQuery = `
+      const bookingQuery = userId
+        ? `
         SELECT 
           COUNT(CASE WHEN b.created_at >= CURRENT_DATE THEN 1 END) as new_bookings_today,
           COUNT(CASE WHEN b.created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as new_bookings_week,
@@ -450,18 +491,35 @@ class ReportsController {
         FROM bookings b
         JOIN rentals r ON b.rental_id = r.id
         WHERE r.owner_id = $1
+      `
+        : `
+        SELECT 
+          COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as new_bookings_today,
+          COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as new_bookings_week,
+          COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bookings,
+          COUNT(CASE WHEN start_date = CURRENT_DATE AND status = 'confirmed' THEN 1 END) as checkins_today,
+          COUNT(CASE WHEN end_date = CURRENT_DATE AND status = 'confirmed' THEN 1 END) as checkouts_today
+        FROM bookings
       `;
 
       // Review stats
-      const reviewQuery = `
+      const reviewQuery = userId
+        ? `
         SELECT 
           COALESCE(AVG(r.rating), 0) as average_rating,
           COUNT(*) as total_reviews
         FROM reviews r
         JOIN rentals rental ON r.rental_id = rental.id
         WHERE rental.owner_id = $1
+      `
+        : `
+        SELECT 
+          COALESCE(AVG(rating), 0) as average_rating,
+          COUNT(*) as total_reviews
+        FROM reviews
       `;
-      const latestReviewsQuery = `
+      const latestReviewsQuery = userId
+        ? `
         SELECT 
           r.rating,
           r.comment,
@@ -474,10 +532,24 @@ class ReportsController {
         WHERE rental.owner_id = $1
         ORDER BY r.created_at DESC
         LIMIT 5
+      `
+        : `
+        SELECT 
+          r.rating,
+          r.comment,
+          r.created_at,
+          rental.title as property_name,
+          u.full_name as reviewer_name
+        FROM reviews r
+        JOIN rentals rental ON r.rental_id = rental.id
+        LEFT JOIN users u ON r.user_id = u.id
+        ORDER BY r.created_at DESC
+        LIMIT 5
       `;
 
       // Current guests
-      const currentGuestsQuery = `
+      const currentGuestsQuery = userId
+        ? `
         SELECT 
           u.full_name as guest_name,
           r.title as property_name,
@@ -492,10 +564,26 @@ class ReportsController {
         AND b.start_date <= CURRENT_DATE
         AND b.end_date >= CURRENT_DATE
         ORDER BY b.start_date ASC
+      `
+        : `
+        SELECT 
+          u.full_name as guest_name,
+          r.title as property_name,
+          b.start_date,
+          b.end_date,
+          b.guests
+        FROM bookings b
+        JOIN rentals r ON b.rental_id = r.id
+        LEFT JOIN users u ON b.user_id = u.id
+        WHERE b.status = 'confirmed'
+        AND b.start_date <= CURRENT_DATE
+        AND b.end_date >= CURRENT_DATE
+        ORDER BY b.start_date ASC
       `;
 
       // Upcoming bookings
-      const upcomingBookingsQuery = `
+      const upcomingBookingsQuery = userId
+        ? `
         SELECT 
           u.full_name as guest_name,
           r.title as property_name,
@@ -510,24 +598,68 @@ class ReportsController {
         AND b.start_date > CURRENT_DATE
         ORDER BY b.start_date ASC
         LIMIT 5
+      `
+        : `
+        SELECT 
+          u.full_name as guest_name,
+          r.title as property_name,
+          b.start_date,
+          b.end_date,
+          b.guests
+        FROM bookings b
+        JOIN rentals r ON b.rental_id = r.id
+        LEFT JOIN users u ON b.user_id = u.id
+        WHERE b.status = 'confirmed'
+        AND b.start_date > CURRENT_DATE
+        ORDER BY b.start_date ASC
+        LIMIT 5
       `;
 
+      const propertyParams = userId ? [userId] : [];
+      const financialParams = userId ? [userId, timeRange] : [timeRange];
+      const bookingParams = userId ? [userId] : [];
+      const reviewParams = userId ? [userId] : [];
+      const latestReviewParams = userId ? [userId] : [];
+      const currentGuestsParams = userId ? [userId] : [];
+      const upcomingBookingsParams = userId ? [userId] : [];
+
+      // For public (no user), ensure only financialParams gets [timeRange], all others get []
+      if (!userId) {
+        // propertyParams = [];
+        // bookingParams = [];
+        // reviewParams = [];
+        // latestReviewParams = [];
+        // currentGuestsParams = [];
+        // upcomingBookingsParams = [];
+      }
+
       const [propertyResult, financialResult, bookingResult, reviewResult, latestReviewsResult, currentGuestsResult, upcomingBookingsResult] = await Promise.all([
-        this.pool.query(propertyQuery, [userId]),
-        this.pool.query(financialQuery, [userId, timeRange]),
-        this.pool.query(bookingQuery, [userId]),
-        this.pool.query(reviewQuery, [userId]),
-        this.pool.query(latestReviewsQuery, [userId]),
-        this.pool.query(currentGuestsQuery, [userId]),
-        this.pool.query(upcomingBookingsQuery, [userId])
+        this.pool.query(propertyQuery, propertyParams),
+        this.pool.query(financialQuery, financialParams),
+        this.pool.query(bookingQuery, bookingParams),
+        this.pool.query(reviewQuery, reviewParams),
+        this.pool.query(latestReviewsQuery, latestReviewParams),
+        this.pool.query(currentGuestsQuery, currentGuestsParams),
+        this.pool.query(upcomingBookingsQuery, upcomingBookingsParams)
       ]);
 
       res.json({
-        propertyStats: propertyResult.rows[0],
-        financialStats: financialResult.rows[0],
+        propertyStats: {
+          ...propertyResult.rows[0],
+          average_price: propertyResult.rows[0]?.average_price ? Number(propertyResult.rows[0].average_price).toFixed(2) : null,
+          average_rating: propertyResult.rows[0]?.average_rating ? Number(propertyResult.rows[0].average_rating).toFixed(2) : null,
+        },
+        financialStats: {
+          ...financialResult.rows[0],
+          total_earnings: financialResult.rows[0]?.total_earnings ? Number(financialResult.rows[0].total_earnings).toFixed(2) : null,
+          paid_earnings: financialResult.rows[0]?.paid_earnings ? Number(financialResult.rows[0].paid_earnings).toFixed(2) : null,
+          pending_payouts: financialResult.rows[0]?.pending_payouts ? Number(financialResult.rows[0].pending_payouts).toFixed(2) : null,
+          average_booking_value: financialResult.rows[0]?.average_booking_value ? Number(financialResult.rows[0].average_booking_value).toFixed(2) : null,
+        },
         bookingStats: bookingResult.rows[0],
         reviewStats: {
           ...reviewResult.rows[0],
+          average_rating: reviewResult.rows[0]?.average_rating ? Number(reviewResult.rows[0].average_rating).toFixed(2) : null,
           latestReviews: latestReviewsResult.rows
         },
         currentGuests: currentGuestsResult.rows,

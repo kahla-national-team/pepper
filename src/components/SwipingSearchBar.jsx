@@ -76,10 +76,11 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   };
 
   const defaultServicesFilters = {
-    service: filters.service || '',
+    name: filters.name || '',
+    category: filters.category || '',
+    priceRange: filters.priceRange || { min: 0, max: 10000 },
+    rating: filters.rating || 0,
     serviceTypes: filters.serviceTypes || [],
-    when: filters.when || '',
-    location: filters.location || '',
     urgency: filters.urgency || '',
     availability: filters.availability || '',
     budget: filters.budget || { min: 0, max: 10000 }
@@ -285,24 +286,12 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   };
 
   // Services mode handlers
-  const handleServiceTypeChange = (type, value) => {
-    const newFilters = {
-      ...currentFilters,
-      [type]: value
-    };
-    setCurrentFilters(newFilters);
-    
-    if (onFilterChange) {
-      onFilterChange(newFilters);
-    }
-  };
-
   const handleServiceChange = (e) => {
     const value = e.target.value;
     
     const newFilters = {
       ...currentFilters,
-      service: value
+      name: value // Use 'name' for backend compatibility
     };
     setCurrentFilters(newFilters);
     
@@ -327,7 +316,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
   const handleServiceSuggestionClick = (suggestion) => {
     const newFilters = {
       ...currentFilters,
-      service: suggestion.name
+      name: suggestion.name // Use 'name' for backend compatibility
     };
     setCurrentFilters(newFilters);
     
@@ -342,7 +331,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
     if (activeMode === 'stays') {
       if (onSearch) onSearch(currentFilters.destination);
     } else {
-      if (onSearch) onSearch(currentFilters.service);
+      if (onSearch) onSearch(currentFilters.name);
     }
   };
 
@@ -576,7 +565,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                 <input 
                   type="text" 
                   placeholder="What service do you need?" 
-                  value={currentFilters?.service || ''}
+                  value={currentFilters?.name || ''}
                   onChange={handleServiceChange}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
@@ -585,7 +574,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                     }
                   }}
                   onFocus={() => {
-                    if ((currentFilters?.service || '').trim()) {
+                    if ((currentFilters?.name || '').trim()) {
                       setShowSuggestions(true);
                     }
                   }}
@@ -663,12 +652,13 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
       {/* Filter Dropdown */}
       {isFilterOpen && (
         <div 
-          className="fixed inset-0 z-[100] bg-black bg-opacity-50"
+          className="fixed inset-0 z-[100] bg-black bg-opacity-50 filter-dropdown-overlay"
           onClick={() => setIsFilterOpen(false)}
         >
           <div 
             className="fixed top-[72px] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl p-6 max-h-[calc(100vh-72px)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
+            ref={filterRef}
           >
           <div className="max-w-4xl mx-auto">
             {activeMode === 'stays' ? (
@@ -707,7 +697,10 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                             ? 'border-black bg-black text-white' 
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
-                        onClick={() => toggleDuration(option.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleDuration(option.id);
+                        }}
                       >
                         <span className="text-base">{option.icon}</span>
                         <span className="text-sm">{option.label}</span>
@@ -727,6 +720,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                         onChange={(e) => handlePriceRangeChange(e.target.value, currentFilters.priceRange.max)}
                         placeholder="0"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black"
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                     <div>
@@ -737,6 +731,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                         onChange={(e) => handlePriceRangeChange(currentFilters.priceRange.min, e.target.value)}
                         placeholder="1000"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black"
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                   </div>
@@ -754,7 +749,10 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                             ? 'border-black bg-black text-white' 
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
-                        onClick={() => handleRatingChange(rating.value)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRatingChange(rating.value);
+                        }}
                       >
                         <div className="flex gap-1">
                           {[...Array(5)].map((_, index) => (
@@ -779,7 +777,10 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                               ? 'border-black bg-black text-white'
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
-                          onClick={() => toggleAmenity(amenity.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAmenity(amenity.id);
+                          }}
                         >
                           <span className="text-base">{amenity.icon}</span>
                           <span className="text-sm">{amenity.label}</span>
@@ -796,7 +797,10 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                           ? 'border-black bg-black text-white'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                       }`}
-                      onClick={toggleFavorites}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorites();
+                      }}
                     >
                       <HeartIcon filled={currentFilters.favorites} />
                       <span className="text-sm font-medium">Show favorites only</span>
@@ -828,96 +832,82 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                   </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Service type</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Category</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {serviceTypes.map(service => (
+                    {serviceCategories.slice(0, 6).map(service => (
                       <button
                         key={service.id}
                           type="button"
                         className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
-                          (currentFilters.serviceTypes || []).includes(service.id) 
+                          currentFilters.category === service.name 
                             ? 'border-black bg-black text-white' 
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
-                        onClick={() => toggleServiceType(service.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFilterChange('category', service.name);
+                        }}
                       >
-                        <span className="text-base">{service.icon}</span>
-                        <span className="text-sm">{service.label}</span>
+                        <span className="text-base">🔧</span>
+                        <span className="text-sm">{service.name}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Urgency</h3>
-                  <div className="space-y-2">
-                    {urgencyOptions.map(option => (
-                      <button
-                        key={option.id}
-                          type="button"
-                        className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
-                          currentFilters.urgency === option.id 
-                            ? 'border-black bg-black text-white' 
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                        }`}
-                          onClick={() => handleFilterChange('urgency', option.id)}
-                      >
-                        <span className="text-base">{option.icon}</span>
-                        <span className="text-sm">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Availability</h3>
-                    <div className="space-y-2">
-                      {availabilityOptions.map(option => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={`flex items-center gap-2 px-4 py-3 border-2 rounded-lg text-sm transition-all duration-200 w-full font-medium ${
-                            currentFilters.availability === option.value 
-                              ? 'border-black bg-black text-white' 
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
-                          onClick={() => handleAvailabilityChange(option.value)}
-                        >
-                        <span className="text-sm">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Budget range</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Price range</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Minimum budget</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Minimum price</label>
                       <input
                         type="number"
-                        value={currentFilters.budget?.min ?? 0}
-                          onChange={(e) => handleFilterChange('budget', { 
-                          ...(currentFilters.budget || {}), 
-                          min: parseInt(e.target.value) || 0 
-                        })}
+                        value={currentFilters.priceRange?.min ?? 0}
+                        onChange={(e) => handlePriceRangeChange(e.target.value, currentFilters.priceRange?.max || 10000)}
                         placeholder="0"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black"
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Maximum budget</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Maximum price</label>
                       <input
                         type="number"
-                        value={currentFilters.budget?.max ?? 10000}
-                          onChange={(e) => handleFilterChange('budget', { 
-                          ...(currentFilters.budget || {}), 
-                          max: parseInt(e.target.value) || 10000 
-                        })}
+                        value={currentFilters.priceRange?.max ?? 10000}
+                        onChange={(e) => handlePriceRangeChange(currentFilters.priceRange?.min || 0, e.target.value)}
                         placeholder="10000"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black"
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Provider Rating</h3>
+                  <div className="space-y-2">
+                    {ratings.slice(0, 3).map(rating => (
+                      <button
+                        key={rating.value}
+                        type="button"
+                        className={`flex items-center gap-3 w-full p-3 border-2 rounded-lg text-sm transition-all duration-200 ${
+                          currentFilters.rating === rating.value 
+                            ? 'border-black bg-black text-white' 
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRatingChange(rating.value);
+                        }}
+                      >
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, index) => (
+                            <StarIcon key={index} filled={index < rating.value} />
+                          ))}
+                        </div>
+                        <span className="text-sm font-medium">{rating.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

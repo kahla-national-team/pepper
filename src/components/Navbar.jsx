@@ -122,7 +122,9 @@ const Navbar = () => {
               <span className="text-lg">👑</span>
               <span>Services</span>
             </button>
-            <Link to="/dashboard" className="text-gray-700 hover:text-[#ff385c] transition-colors">Host Service</Link>
+            <div className="flex justify-center">
+              <Link to="/dashboard" className="text-gray-700 hover:text-[#ff385c] transition-colors  flex items-center">Host Service</Link>
+            </div>
           </div>
 
           {/* User Section */}

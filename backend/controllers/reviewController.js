@@ -269,6 +269,16 @@ const reviewController = {
       const review = reviewResult.rows[0];
       console.log('Review submission - Created review:', review.id);
 
+      // Fetch the full review with user details to return to the client
+      const fullReviewResult = await client.query(
+        `SELECT r.*, u.full_name as user_name, u.profile_image as user_image
+         FROM reviews r
+         LEFT JOIN users u ON r.user_id = u.id
+         WHERE r.id = $1`,
+        [review.id]
+      );
+      const fullReview = fullReviewResult.rows[0];
+
       // Create notification for the owner
       try {
         let ownerId = null;
@@ -296,9 +306,9 @@ const reviewController = {
 
         if (ownerId && itemName) {
           await client.query(
-            `INSERT INTO notifications (user_id, message, is_read)
-             VALUES ($1, $2, false)`,
-            [ownerId, `You have received a new ${ratingValue}-star review for ${itemName}`]
+            `INSERT INTO notifications (recipient_id, title, message, type, status)
+             VALUES ($1, $2, $3, 'review', 'unread')`,
+            [ownerId, 'New Review Received', `You have received a new ${ratingValue}-star review for ${itemName}`]
           );
           console.log('Review submission - Created notification for owner');
         }
@@ -312,7 +322,7 @@ const reviewController = {
 
       res.status(201).json({
         success: true,
-        data: review,
+        data: fullReview,
         message: 'Review created successfully'
       });
     } catch (error) {

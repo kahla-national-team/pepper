@@ -49,25 +49,16 @@ const RentalMap = ({ rentals, selectedRental, onRentalSelect, initialCenter }) =
 
           const infoWindow = new InfoWindow({
             content: `
-              <div class="p-4 max-w-xs">
-                <img src="${rental.image}" alt="${rental.title}" class="w-full h-32 object-cover rounded-lg mb-2"/>
-                <h3 class="font-bold text-lg mb-1">${rental.title}</h3>
-                <p class="text-gray-600 text-sm mb-2">${rental.address}</p>
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-[#ff385c] font-bold">${rental.price}</span>
-                  <div class="flex items-center text-yellow-400">
-                    <span class="mr-1">★</span>
-                    <span class="text-gray-600">${rental.provider.rating}</span>
-                  </div>
-                </div>
-                <div class="flex items-center text-gray-500 text-sm">
-                  <span class="mr-3"><i class="fas fa-bed mr-1"></i>${rental.bedrooms || 0} beds</span>
-                  <span class="mr-3"><i class="fas fa-bath mr-1"></i>${rental.bathrooms || 0} baths</span>
-                  <span><i class="fas fa-users mr-1"></i>${rental.max_guests || 1} guests</span>
+              <div style="padding: 0; max-width: 220px; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.15); background: #fff;">
+                <img src="${rental.image}" alt="${rental.title}" style="width: 100%; height: 90px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px;"/>
+                <div style="padding: 10px;">
+                  <h3 style="font-size: 1rem; font-weight: bold; margin-bottom: 4px; color: #222;">${rental.title}</h3>
+                  <div style="color: #ff385c; font-weight: bold; margin-bottom: 4px;">${rental.price}</div>
+                  <button style="background: #ff385c; color: #fff; border: none; border-radius: 5px; padding: 6px 12px; font-size: 0.9rem; cursor: pointer; margin-top: 4px;" onclick="window.open('/details/${rental.id}', '_blank')">View Details</button>
                 </div>
               </div>
             `,
-            maxWidth: 300,
+            maxWidth: 240,
           });
 
           marker.addListener('click', () => {

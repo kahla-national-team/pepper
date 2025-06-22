@@ -1,131 +1,111 @@
 "use client"
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { FaMapMarkerAlt } from 'react-icons/fa';
-import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
-import { useGoogleMaps } from '../contexts/GoogleMapsProvider';
+import OpenStreetMap from './OpenStreetMap';
+import { useOpenStreetMap } from '../contexts/OpenStreetMapProvider';
+import { rentalService } from '../services/rentalService';
 
-const RentalLocationMap = ({ location, address, title }) => {
-  const [showInfoWindow, setShowInfoWindow] = useState(false);
-  const { isLoaded, loadError } = useGoogleMaps();
+const RentalLocationMap = ({ rentalId, className = '', height = '400px' }) => {
+  const [rental, setRental] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { isLoaded, loadError } = useOpenStreetMap();
 
-  const mapContainerStyle = {
-    width: '100%',
-    height: '400px',
-    borderRadius: '0.75rem',
-    marginBottom: '1rem'
-  };
-
-  // Handle both string and number coordinates
-  const center = {
-    lat: typeof location?.lat === 'string' ? parseFloat(location.lat) : location?.lat || 0,
-    lng: typeof location?.lng === 'string' ? parseFloat(location.lng) : location?.lng || 0
-  };
-
-  const onLoad = useCallback((map) => {
-    if (center.lat === 0 && center.lng === 0) {
-      console.warn('Invalid coordinates provided to RentalLocationMap');
+  useEffect(() => {
+    if (rentalId) {
+      fetchRental();
     }
-  }, [center]);
+  }, [rentalId]);
 
-  const onUnmount = useCallback(() => {
-    // Cleanup if needed
-  }, []);
+  const fetchRental = async () => {
+    try {
+      setLoading(true);
+      const response = await rentalService.getRental(rentalId);
+      setRental(response);
+    } catch (error) {
+      console.error('Error fetching rental:', error);
+      setError('Failed to load rental location');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderMapContainer = () => (
-    <div className="w-full h-[400px]">
-      {!isLoaded ? (
-        <div className="flex items-center justify-center h-full bg-gray-100">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff385c]"></div>
-        </div>
-      ) : loadError ? (
-        <div className="flex items-center justify-center h-full bg-gray-100">
-          <div className="text-center">
-            <p className="text-red-500 mb-2">Map not available</p>
-            <p className="text-sm text-gray-600">Location: {address}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {loadError.message || 'Unable to load map'}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          center={center}
-          zoom={15}
-          onLoad={onLoad}
-          onUnmount={onUnmount}
-          options={{
-            disableDefaultUI: false,
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false
-          }}
-        >
-          <Marker
-            position={center}
-            onClick={() => setShowInfoWindow(true)}
-          />
-          {showInfoWindow && (
-            <InfoWindow
-              position={center}
-              onCloseClick={() => setShowInfoWindow(false)}
-            >
-              <div>
-                <h3 className="font-semibold">{title}</h3>
-                <p className="text-sm text-gray-600">{address}</p>
-              </div>
-            </InfoWindow>
-          )}
-        </GoogleMap>
-      )}
-    </div>
-  );
-
-  // Don't render the map if we don't have valid coordinates
-  if (center.lat === 0 && center.lng === 0) {
+  if (loadError) {
     return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <FaMapMarkerAlt className="text-[#ff385c] mr-2" />
-            Location
-          </h3>
-          {address && (
-            <p className="text-gray-600 text-sm mt-1">{address}</p>
-          )}
-        </div>
-        <div className="p-4 text-center text-gray-500">
-          Location information not available
+      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center">
+          <p className="text-red-500">Error loading map</p>
+          <p className="text-sm text-gray-600">{loadError.message}</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-          <FaMapMarkerAlt className="text-[#ff385c] mr-2" />
-          Location
-        </h3>
-        {address && (
-          <p className="text-gray-600 text-sm mt-1">{address}</p>
-        )}
-      </div>
-      {renderMapContainer()}
+  if (!isLoaded || loading) {
+    return (
+      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
+          <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-600">Loading map...</p>
+        </div>
     </div>
+  );
+  }
+
+  if (error) {
+    return (
+      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center">
+          <p className="text-red-500">Error loading rental</p>
+          <p className="text-sm text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!rental || (!rental.latitude && !rental.location?.lat) || (!rental.longitude && !rental.location?.lng)) {
+    return (
+      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center">
+          <p className="text-gray-600">No location data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get coordinates from either direct fields or location object
+  const lat = rental.latitude || rental.location?.lat;
+  const lng = rental.longitude || rental.location?.lng;
+  const center = [parseFloat(lat), parseFloat(lng)];
+  const markers = [{
+    position: center,
+    title: rental.title,
+    content: `
+      <div class="p-2">
+        <h3 class="font-semibold text-lg">${rental.title}</h3>
+        <p class="text-gray-600">${rental.address || 'Location'}</p>
+        <p class="text-green-600 font-semibold">$${rental.price}/night</p>
+      </div>
+    `
+  }];
+
+  return (
+    <OpenStreetMap
+      center={center}
+      zoom={15}
+      markers={markers}
+      className={className}
+      height={height}
+      width="100%"
+    />
   );
 };
 
 RentalLocationMap.propTypes = {
-  location: PropTypes.shape({
-    lat: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    lng: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-  }).isRequired,
-  address: PropTypes.string,
-  title: PropTypes.string
+  rentalId: PropTypes.string.isRequired,
+  className: PropTypes.string,
+  height: PropTypes.string
 };
 
 export default RentalLocationMap; 

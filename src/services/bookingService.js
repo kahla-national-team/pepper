@@ -102,22 +102,22 @@ export const bookingService = {
         throw new Error('Booking ID is required');
       }
       
-      // First try to get it as a service request
+      // First try to get it as a rental booking
       try {
-        const response = await api.get(`/service-requests/${id}`);
+        const response = await api.get(`/bookings/${id}`);
         return response.data;
-      } catch (serviceError) {
-        // If service request fails, try as a rental booking
-        if (serviceError.response?.status === 404) {
+      } catch (bookingError) {
+        // If rental booking fails with 404, try as a service request
+        if (bookingError.response?.status === 404) {
     try {
-      const response = await api.get(`/bookings/${id}`);
+            const response = await api.get(`/service-requests/${id}`);
       return response.data;
-          } catch (bookingError) {
-            // If both fail, throw the original error
-            throw serviceError;
+          } catch (serviceError) {
+            // If both fail, throw the original booking error
+            throw bookingError;
           }
         } else {
-          throw serviceError;
+          throw bookingError;
         }
       }
     } catch (error) {

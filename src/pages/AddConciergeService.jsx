@@ -9,7 +9,7 @@ const AddConciergeService = () => {
   const handleSubmit = async (formData) => {
     try {
       await conciergeService.createService(formData);
-      navigate('/dashboard-service'); // Redirect after success
+      navigate('/dashboard/concierge-services'); // Redirect after success
     } catch (error) {
       alert(error.message || 'Failed to add concierge service.');
     }

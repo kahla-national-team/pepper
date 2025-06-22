@@ -31,11 +31,12 @@ import BookingRequests from './pages/BookingRequests';
 import NotificationSidebar from './components/NotificationSidebar';
 import UserRentalsPage from './pages/UserRentalsPage';
 import EditRentalForm from './components/EditRentalForm';
-import { GoogleMapsProvider } from './contexts/GoogleMapsProvider';
+import { OpenStreetMapProvider } from './contexts/OpenStreetMapProvider';
 import { AuthProvider } from './contexts/AuthContext';
 import RentalsMapPage from './pages/RentalsMapPage';
 import AddConciergeService from './pages/AddConciergeService';
 import DashboardConciergeServices from './pages/DashboardConciergeServices';
+import BookingDetails from './pages/BookingDetails';
 
 const libraries = ['places', 'marker', 'maps'];
 
@@ -47,7 +48,7 @@ const AppContent = () => {
   return (
     <div className="w-full min-h-screen m-0 bg-white flex flex-col">
       {!hideNavbar && <Navbar />}
-      <div className="flex-1 pt-16">
+      <div className="flex-1 ">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -101,6 +102,11 @@ const AppContent = () => {
               <Bookings />
             </ProtectedRoute>
           } />
+          <Route path="/bookings/:id" element={
+            <ProtectedRoute>
+              <BookingDetails />
+            </ProtectedRoute>
+          } />
           <Route 
             path="/booking-requests" 
             element={
@@ -145,7 +151,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <GoogleMapsProvider>
+        <OpenStreetMapProvider>
           <SearchModeProvider>
             <MapVisibilityProvider>
               <NotificationProvider>
@@ -153,7 +159,7 @@ function App() {
               </NotificationProvider>
             </MapVisibilityProvider>
           </SearchModeProvider>
-        </GoogleMapsProvider>
+        </OpenStreetMapProvider>
       </AuthProvider>
     </BrowserRouter>
   );

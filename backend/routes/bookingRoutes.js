@@ -9,6 +9,47 @@ const NotificationService = require('../services/notificationService');
 // Get user's bookings
 router.get('/user', auth, bookingController.getUserBookings);
 
+// Get booking by ID (must come before /user/:userId to avoid conflicts)
+router.get('/:id', auth, async (req, res) => {
+  const client = await req.app.locals.pool.connect();
+  try {
+    const { id } = req.params;
+    const query = `
+      SELECT b.*, r.title as property_name, r.owner_id,
+             u1.full_name as owner_name, u1.email as owner_email,
+             u2.full_name as renter_name, u2.email as renter_email
+      FROM bookings b
+      JOIN rentals r ON b.rental_id = r.id
+      JOIN users u1 ON r.owner_id = u1.id
+      JOIN users u2 ON b.user_id = u2.id
+      WHERE b.id = $1
+    `;
+
+    const result = await client.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching booking',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // Get bookings for a specific user by ID
 router.get('/user/:userId', auth, async (req, res) => {
   const client = await req.app.locals.pool.connect();
@@ -286,47 +327,6 @@ router.get('/', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching bookings',
-      error: error.message
-    });
-  } finally {
-    client.release();
-  }
-});
-
-// Get booking by ID
-router.get('/:id', auth, async (req, res) => {
-  const client = await req.app.locals.pool.connect();
-  try {
-    const { id } = req.params;
-    const query = `
-      SELECT b.*, r.title as property_name, r.owner_id,
-             u1.full_name as owner_name, u1.email as owner_email,
-             u2.full_name as renter_name, u2.email as renter_email
-      FROM bookings b
-      JOIN rentals r ON b.rental_id = r.id
-      JOIN users u1 ON r.owner_id = u1.id
-      JOIN users u2 ON b.user_id = u2.id
-      WHERE b.id = $1
-    `;
-
-    const result = await client.query(query, [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error fetching booking:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching booking',
       error: error.message
     });
   } finally {

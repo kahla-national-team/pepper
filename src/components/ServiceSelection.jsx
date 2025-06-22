@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaPlus, FaMinus, FaConciergeBell, FaSpinner } from 'react-icons/fa';
 import { conciergeService } from '../services/conciergeService';
 
-const ServiceSelection = ({ onServicesChange, selectedServices = [] }) => {
+const ServiceSelection = ({ onServicesChange, selectedServices = [], providerId }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,12 +12,17 @@ const ServiceSelection = ({ onServicesChange, selectedServices = [] }) => {
 
   useEffect(() => {
     fetchServices();
-  }, []);
+  }, [providerId]);
 
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const response = await conciergeService.getAllServices();
+      let response;
+      if (providerId) {
+        response = await conciergeService.getServicesByUserId(providerId);
+      } else {
+        response = await conciergeService.getAllServices();
+      }
       if (response.success) {
         setServices(response.data);
       } else {
@@ -49,9 +54,11 @@ const ServiceSelection = ({ onServicesChange, selectedServices = [] }) => {
   };
 
   const getServicePrice = (service) => {
-    // Extract numeric price from string like "$50/hour"
-    const priceMatch = service.price.match(/\$(\d+)/);
-    return priceMatch ? parseInt(priceMatch[1]) : 0;
+    if (!service || !service.price) return 0;
+    if (typeof service.price === 'number') return service.price;
+    // Extract numeric price from string like "$50/hour" or "2500.00"
+    const priceMatch = service.price.match(/\d+(\.\d{1,2})?/);
+    return priceMatch ? parseFloat(priceMatch[0]) : 0;
   };
 
   const getTotalServicesPrice = () => {
@@ -87,7 +94,9 @@ const ServiceSelection = ({ onServicesChange, selectedServices = [] }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">Additional Services</h3>
+        <h3 className="font-semibold text-gray-900">
+          {providerId ? 'All Additional Services by this Owner' : 'Additional Services'}
+        </h3>
         {selectedServiceIds.length > 0 && (
           <span className="text-sm text-gray-600">
             {selectedServiceIds.length} selected
@@ -133,7 +142,7 @@ const ServiceSelection = ({ onServicesChange, selectedServices = [] }) => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium text-gray-900">
-                      ${price}
+                      ${price.toFixed(2)}
                     </span>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                       isSelected 

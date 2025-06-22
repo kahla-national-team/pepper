@@ -17,6 +17,7 @@ const rentalRoutes = require('./rentalRoutes');
 const userRoutes = require('./userRoutes');
 const bookingRoutes = require('./bookingRoutes');
 const notificationRoutes = require('./notifications');
+const reportsController = require('../controllers/reportsController');
 
 // Root route
 router.get('/', (req, res) => {
@@ -38,5 +39,8 @@ router.use('/rentals', rentalRoutes);
 router.use('/users', userRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/notifications', notificationRoutes);
+
+// Add reports route
+router.get('/reports', (req, res) => reportsController.getComprehensiveReport(req, res));
 
 module.exports = router;

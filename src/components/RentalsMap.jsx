@@ -1,229 +1,120 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { GoogleMap, InfoWindow } from '@react-google-maps/api';
+import React, { useState, useEffect } from 'react';
+import OpenStreetMap from './OpenStreetMap';
+import { useOpenStreetMap } from '../contexts/OpenStreetMapProvider';
 import { rentalService } from '../services/rentalService';
-import { Link } from 'react-router-dom';
 
-// Define required libraries
-const libraries = ['marker'];
-
-// Default center (New York City)
-const defaultCenter = {
-  lat: 40.7128,
-  lng: -74.0060
-};
-
-const RentalsMap = () => {
+const RentalsMap = ({ onRentalClick, className = '', height = '600px' }) => {
   const [rentals, setRentals] = useState([]);
-  const [selectedRental, setSelectedRental] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [markers, setMarkers] = useState([]);
-  const [mapCenter, setMapCenter] = useState(defaultCenter);
-  const [mapError, setMapError] = useState(null);
+  const [selectedRental, setSelectedRental] = useState(null);
+  const { isLoaded, loadError } = useOpenStreetMap();
 
-  const mapContainerStyle = {
-    width: '100%',
-    height: '600px',
-    borderRadius: '0.75rem'
-  };
-
-  // Fetch rentals data
   useEffect(() => {
+    fetchRentals();
+  }, []);
+
     const fetchRentals = async () => {
       try {
         setLoading(true);
-        const data = await rentalService.getAllRentals();
-        console.log('Fetched rentals:', data); // Debug log
-
-        // Filter and validate rentals with coordinates
-        const validRentals = data.filter(rental => {
-          const hasValidCoords = 
-            rental.latitude && 
-            rental.longitude && 
-            !isNaN(parseFloat(rental.latitude)) && 
-            !isNaN(parseFloat(rental.longitude));
-          
-          if (!hasValidCoords) {
-            console.warn('Invalid coordinates for rental:', rental); // Debug log
-          }
-          return hasValidCoords;
-        });
-
-        console.log('Valid rentals:', validRentals); // Debug log
-        setRentals(validRentals);
-        
-        // Set map center to first valid rental or default
-        if (validRentals.length > 0) {
-          const firstRental = validRentals[0];
-          setMapCenter({
-            lat: parseFloat(firstRental.latitude),
-            lng: parseFloat(firstRental.longitude)
-          });
-        }
-        
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching rentals:', err);
-        setError('Failed to load rental locations');
+      const response = await rentalService.getRentals();
+      setRentals(response || []);
+    } catch (error) {
+      console.error('Error fetching rentals:', error);
+      setError('Failed to load rentals');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRentals();
-  }, []);
-
-  // Create marker element
-  const createMarkerElement = useCallback((rental) => {
-    const element = document.createElement('div');
-    element.className = 'custom-marker';
-    element.innerHTML = `
-      <div class="w-8 h-8 bg-[#ff385c] rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-        $${rental.price}
-      </div>
-    `;
-    return element;
-  }, []);
-
-  // Initialize map and markers
-  const onLoad = useCallback((map) => {
-    console.log('Map loaded, rentals:', rentals); // Debug log
-
-    if (rentals.length > 0) {
-      const bounds = new window.google.maps.LatLngBounds();
-      const newMarkers = [];
-
-      rentals.forEach((rental, index) => {
-        try {
-          const position = {
-            lat: parseFloat(rental.latitude),
-            lng: parseFloat(rental.longitude)
-          };
-
-          console.log(`Creating marker ${index + 1}:`, position); // Debug log
-
-          // Create marker element
-          const markerView = new window.google.maps.marker.AdvancedMarkerElement({
-            map,
-            position,
-            title: rental.title,
-            content: createMarkerElement(rental),
-            gmpClickable: true
-          });
-
-          // Add click listener
-          markerView.addListener('click', () => {
-            console.log('Marker clicked:', rental); // Debug log
+  const handleMarkerClick = (rental) => {
             setSelectedRental(rental);
-          });
-
-          newMarkers.push(markerView);
-          bounds.extend(position);
-        } catch (err) {
-          console.error(`Error creating marker for rental ${index}:`, err);
-        }
-      });
-
-      console.log('Setting markers:', newMarkers.length); // Debug log
-      setMarkers(newMarkers);
-      map.fitBounds(bounds);
+    if (onRentalClick) {
+      onRentalClick(rental);
     }
-  }, [rentals, createMarkerElement]);
+  };
 
-  // Handle map errors
-  const onMapError = useCallback((error) => {
-    console.error('Map error:', error);
-    setMapError('Failed to load map. Please try again later.');
-  }, []);
+  // Convert rentals to markers format
+  const markers = rentals
+    .filter(rental => rental.location && rental.location.lat && rental.location.lng)
+    .map(rental => ({
+      position: [parseFloat(rental.location.lat), parseFloat(rental.location.lng)],
+      title: rental.title,
+      content: `
+        <div class="p-2">
+          <h3 class="font-semibold text-lg">${rental.title}</h3>
+          <p class="text-gray-600">${rental.description?.substring(0, 100)}...</p>
+          <p class="text-green-600 font-semibold">${rental.price}</p>
+        </div>
+      `,
+      rental: rental
+    }));
 
-  // Cleanup markers
-  useEffect(() => {
-    return () => {
-      markers.forEach(marker => {
-        if (marker && marker.map) {
-          marker.map = null;
-        }
-      });
-    };
-  }, [markers]);
+  // Calculate center from rentals or use default
+  const center = markers.length > 0 
+    ? markers.reduce((acc, marker) => [
+        acc[0] + marker.position[0], 
+        acc[1] + marker.position[1]
+      ], [0, 0]).map(coord => coord / markers.length)
+    : [51.505, -0.09];
 
-  if (loading) {
+  if (loadError) {
     return (
-      <div className="w-full h-[600px] flex items-center justify-center bg-gray-50 rounded-lg">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff385c]"></div>
-      </div>
-    );
-  }
-
-  if (error || mapError) {
-    return (
-      <div className="w-full h-[600px] flex items-center justify-center bg-gray-50 rounded-lg">
+      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">Error</h3>
-          <p className="text-gray-600 mt-2">{error || mapError}</p>
+          <p className="text-red-500">Error loading map</p>
+          <p className="text-sm text-gray-600">{loadError.message}</p>
         </div>
       </div>
     );
   }
 
-  if (rentals.length === 0) {
+  if (!isLoaded || loading) {
     return (
-      <div className="w-full h-[600px] flex items-center justify-center bg-gray-50 rounded-lg">
+      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">No Rentals Found</h3>
-          <p className="text-gray-600 mt-2">There are no rentals with valid locations to display on the map.</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-600">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center">
+          <p className="text-red-500">Error loading rentals</p>
+          <p className="text-sm text-gray-600">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[600px] rounded-lg overflow-hidden shadow-lg">
-      <GoogleMap
-        mapContainerStyle={mapContainerStyle}
-        center={mapCenter}
-        zoom={2}
-        onLoad={onLoad}
-        onError={onMapError}
-        options={{
-          mapId: 'rental_map',
-          disableDefaultUI: false,
-          zoomControl: true,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: true
-        }}
-      >
+    <div className={className}>
+      <OpenStreetMap
+        center={center}
+        zoom={10}
+        markers={markers}
+        onMarkerClick={(markerData) => handleMarkerClick(markerData.rental)}
+        height={height}
+        width="100%"
+      />
+      
         {selectedRental && (
-          <InfoWindow
-            position={{
-              lat: parseFloat(selectedRental.latitude),
-              lng: parseFloat(selectedRental.longitude)
-            }}
-            onCloseClick={() => setSelectedRental(null)}
-          >
-            <div className="p-2">
-              <img
-                src={selectedRental.image || '/placeholder-stay.jpg'}
-                alt={selectedRental.title}
-                className="w-full h-32 object-cover rounded-lg mb-2"
-                onError={(e) => {
-                  e.target.src = '/placeholder-stay.jpg';
-                }}
-              />
-              <h3 className="font-semibold text-gray-900">{selectedRental.title}</h3>
-              <p className="text-sm text-gray-600 mb-2">{selectedRental.address}</p>
-              <p className="text-[#ff385c] font-semibold">${selectedRental.price} per night</p>
-              <Link
-                to={`/details/stay/${selectedRental.id}`}
-                className="mt-2 inline-block text-sm text-[#ff385c] hover:underline"
+        <div className="mt-4 p-4 bg-white rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold">{selectedRental.title}</h3>
+          <p className="text-gray-600 mt-1">{selectedRental.description}</p>
+          <p className="text-green-600 font-semibold mt-2">${selectedRental.price}/night</p>
+          <button
+            onClick={() => onRentalClick(selectedRental)}
+            className="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 View Details
-              </Link>
+          </button>
             </div>
-          </InfoWindow>
         )}
-      </GoogleMap>
     </div>
   );
 };

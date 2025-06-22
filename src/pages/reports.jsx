@@ -1,67 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaHome, FaChartLine, FaCalendarAlt, FaStar, FaUsers, FaMoneyBillWave, FaArrowUp, FaArrowDown, FaCheck, FaTimes } from 'react-icons/fa';
 import Navbar from '../components/Navbar';
+import { getReports } from '../services/reportsService';
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState('month'); // 'week', 'month', 'year'
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [report, setReport] = useState(null);
 
-  // Sample data - replace with actual data from your backend
-  const propertyStats = {
-    totalListed: 25,
-    activeListings: 20,
-    occupancyRate: 85,
-    upcomingBookings: [
-      { name: 'John Smith', checkIn: '2024-03-20', checkOut: '2024-03-25', property: 'Luxury Villa' },
-      { name: 'Emma Davis', checkIn: '2024-03-22', checkOut: '2024-03-28', property: 'Beach House' }
-    ],
-    currentGuests: [
-      { name: 'Michael Brown', checkIn: '2024-03-15', checkOut: '2024-03-21', property: 'Mountain Cabin' },
-      { name: 'Sarah Wilson', checkIn: '2024-03-18', checkOut: '2024-03-24', property: 'City Apartment' }
-    ]
-  };
+  useEffect(() => {
+    const fetchReport = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getReports(timeRange);
+        setReport(data);
+      } catch (err) {
+        setError('Failed to fetch report');
+        setReport(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReport();
+  }, [timeRange]);
 
-  const financialStats = {
-    monthlyEarnings: 45000,
-    yearlyEarnings: 320000,
-    pendingPayouts: 12500,
-    unpaidInvoices: 3500,
-    adr: 250,
-    revpar: 212.50
-  };
+  // Helper to safely get a value or NaN
+  const safe = (val) => (val === undefined || val === null ? 'NaN' : val);
 
-  const bookingStats = {
-    newBookings: {
-      today: 3,
-      week: 12,
-      month: 45
-    },
-    cancelledBookings: 5,
-    checkIns: {
-      today: 2,
-      week: 8
-    },
-    checkOuts: {
-      today: 1,
-      week: 7
-    },
-    sources: {
-      direct: 45,
-      app: 35,
-      thirdParty: 20
-    }
-  };
-
-  const reviewStats = {
-    averageRating: 4.8,
-    latestReviews: [
-      { property: 'Luxury Villa', rating: 5, comment: 'Amazing experience!', date: '2024-03-18' },
-      { property: 'Beach House', rating: 4, comment: 'Great location and service', date: '2024-03-17' }
-    ],
-    reviewCount: {
-      month: 28,
-      lifetime: 450
-    }
-  };
+  // Fallbacks if no data
+  const propertyStats = report?.propertyStats || {};
+  const financialStats = report?.financialStats || {};
+  const bookingStats = report?.bookingStats || {};
+  const reviewStats = report?.reviewStats || { latestReviews: [] };
+  const currentGuests = report?.currentGuests || [];
+  const upcomingBookings = report?.upcomingBookings || [];
 
   const StatCard = ({ title, value, icon, trend, color }) => (
     <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg hover:shadow-xl transition-all">
@@ -79,7 +53,7 @@ const Reports = () => {
         )}
       </div>
       <h3 className="text-gray-600 text-sm font-medium mb-1">{title}</h3>
-      <p className="text-2xl font-bold text-gray-800">{value}</p>
+      <p className="text-2xl font-bold text-gray-800">{safe(value)}</p>
     </div>
   );
 
@@ -110,197 +84,208 @@ const Reports = () => {
             </div>
           </div>
 
-          {/* Property Stats Section */}
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <FaHome className="text-[#ff385c] mr-3" />
-              Property Statistics
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard 
-                title="Total Properties Listed"
-                value={propertyStats.totalListed}
-                icon={<FaHome className="text-[#ff385c] text-xl" />}
-                color="bg-[#ff385c]/10"
-              />
-              <StatCard 
-                title="Active Listings"
-                value={propertyStats.activeListings}
-                icon={<FaCheck className="text-green-500 text-xl" />}
-                color="bg-green-50"
-                trend={5}
-              />
-              <StatCard 
-                title="Occupancy Rate"
-                value={`${propertyStats.occupancyRate}%`}
-                icon={<FaChartLine className="text-blue-500 text-xl" />}
-                color="bg-blue-50"
-                trend={2}
-              />
-              <StatCard 
-                title="Upcoming Bookings"
-                value={propertyStats.upcomingBookings.length}
-                icon={<FaCalendarAlt className="text-purple-500 text-xl" />}
-                color="bg-purple-50"
-              />
-            </div>
-          </section>
-
-          {/* Financial Stats Section */}
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <FaMoneyBillWave className="text-[#ff385c] mr-3" />
-              Financial Statistics
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard 
-                title="Monthly Earnings"
-                value={`$${financialStats.monthlyEarnings.toLocaleString()}`}
-                icon={<FaMoneyBillWave className="text-green-500 text-xl" />}
-                color="bg-green-50"
-                trend={8}
-              />
-              <StatCard 
-                title="Pending Payouts"
-                value={`$${financialStats.pendingPayouts.toLocaleString()}`}
-                icon={<FaMoneyBillWave className="text-yellow-500 text-xl" />}
-                color="bg-yellow-50"
-              />
-              <StatCard 
-                title="Average Daily Rate"
-                value={`$${financialStats.adr}`}
-                icon={<FaChartLine className="text-blue-500 text-xl" />}
-                color="bg-blue-50"
-                trend={3}
-              />
-              <StatCard 
-                title="RevPAR"
-                value={`$${financialStats.revpar}`}
-                icon={<FaChartLine className="text-purple-500 text-xl" />}
-                color="bg-purple-50"
-                trend={4}
-              />
-            </div>
-          </section>
-
-          {/* Booking Stats Section */}
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <FaCalendarAlt className="text-[#ff385c] mr-3" />
-              Booking Statistics
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard 
-                title="New Bookings (Today)"
-                value={bookingStats.newBookings.today}
-                icon={<FaCalendarAlt className="text-green-500 text-xl" />}
-                color="bg-green-50"
-                trend={12}
-              />
-              <StatCard 
-                title="Cancelled Bookings"
-                value={bookingStats.cancelledBookings}
-                icon={<FaTimes className="text-red-500 text-xl" />}
-                color="bg-red-50"
-                trend={-5}
-              />
-              <StatCard 
-                title="Check-ins Today"
-                value={bookingStats.checkIns.today}
-                icon={<FaUsers className="text-blue-500 text-xl" />}
-                color="bg-blue-50"
-              />
-              <StatCard 
-                title="Check-outs Today"
-                value={bookingStats.checkOuts.today}
-                icon={<FaUsers className="text-purple-500 text-xl" />}
-                color="bg-purple-50"
-              />
-            </div>
-          </section>
-
-          {/* Reviews Section */}
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <FaStar className="text-[#ff385c] mr-3" />
-              Reviews & Ratings
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Average Rating</h3>
-                <div className="flex items-center">
-                  <div className="text-4xl font-bold text-[#ff385c] mr-4">
-                    {reviewStats.averageRating}
-                  </div>
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <FaStar key={i} className={i < Math.floor(reviewStats.averageRating) ? 'text-yellow-400' : 'text-gray-300'} />
-                    ))}
-                  </div>
+          {loading ? (
+            <div className="text-center py-12 text-lg text-gray-500">Loading report...</div>
+          ) : error ? (
+            <div className="text-center py-12 text-lg text-red-500">{error}</div>
+          ) : (
+            <>
+              {/* Property Stats Section */}
+              <section className="mb-12">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <FaHome className="text-[#ff385c] mr-3" />
+                  Property Statistics
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard 
+                    title="Total Properties Listed"
+                    value={propertyStats.total_listed}
+                    icon={<FaHome className="text-[#ff385c] text-xl" />}
+                    color="bg-[#ff385c]/10"
+                  />
+                  <StatCard 
+                    title="Active Listings"
+                    value={propertyStats.active_listings}
+                    icon={<FaCheck className="text-green-500 text-xl" />}
+                    color="bg-green-50"
+                  />
+                  <StatCard 
+                    title="Available Listings"
+                    value={propertyStats.available_listings}
+                    icon={<FaCheck className="text-blue-500 text-xl" />}
+                    color="bg-blue-50"
+                  />
+                  <StatCard 
+                    title="Average Price"
+                    value={propertyStats.average_price}
+                    icon={<FaMoneyBillWave className="text-purple-500 text-xl" />}
+                    color="bg-purple-50"
+                  />
                 </div>
-                <p className="text-gray-600 mt-2">
-                  Based on {reviewStats.reviewCount.lifetime} reviews
-                </p>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/50 shadow-lg">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Latest Reviews</h3>
-                <div className="space-y-4">
-                  {reviewStats.latestReviews.map((review, index) => (
-                    <div key={index} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-gray-800">{review.property}</h4>
-                        <div className="flex text-yellow-400">
-                          {[...Array(5)].map((_, i) => (
-                            <FaStar key={i} className={i < review.rating ? 'text-yellow-400' : 'text-gray-300'} />
-                          ))}
+              </section>
+
+              {/* Financial Stats Section */}
+              <section className="mb-12">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <FaMoneyBillWave className="text-[#ff385c] mr-3" />
+                  Financial Statistics
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard 
+                    title="Total Earnings"
+                    value={financialStats.total_earnings}
+                    icon={<FaMoneyBillWave className="text-green-500 text-xl" />}
+                    color="bg-green-50"
+                  />
+                  <StatCard 
+                    title="Paid Earnings"
+                    value={financialStats.paid_earnings}
+                    icon={<FaMoneyBillWave className="text-yellow-500 text-xl" />}
+                    color="bg-yellow-50"
+                  />
+                  <StatCard 
+                    title="Pending Payouts"
+                    value={financialStats.pending_payouts}
+                    icon={<FaMoneyBillWave className="text-blue-500 text-xl" />}
+                    color="bg-blue-50"
+                  />
+                  <StatCard 
+                    title="Average Booking Value"
+                    value={financialStats.average_booking_value}
+                    icon={<FaChartLine className="text-purple-500 text-xl" />}
+                    color="bg-purple-50"
+                  />
+                </div>
+              </section>
+
+              {/* Booking Stats Section */}
+              <section className="mb-12">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <FaCalendarAlt className="text-[#ff385c] mr-3" />
+                  Booking Statistics
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard 
+                    title="New Bookings (Today)"
+                    value={bookingStats.new_bookings_today}
+                    icon={<FaCalendarAlt className="text-green-500 text-xl" />}
+                    color="bg-green-50"
+                  />
+                  <StatCard 
+                    title="New Bookings (Week)"
+                    value={bookingStats.new_bookings_week}
+                    icon={<FaCalendarAlt className="text-blue-500 text-xl" />}
+                    color="bg-blue-50"
+                  />
+                  <StatCard 
+                    title="Cancelled Bookings"
+                    value={bookingStats.cancelled_bookings}
+                    icon={<FaTimes className="text-red-500 text-xl" />}
+                    color="bg-red-50"
+                  />
+                  <StatCard 
+                    title="Check-ins Today"
+                    value={bookingStats.checkins_today}
+                    icon={<FaCheck className="text-green-500 text-xl" />}
+                    color="bg-green-50"
+                  />
+                  <StatCard 
+                    title="Check-outs Today"
+                    value={bookingStats.checkouts_today}
+                    icon={<FaCheck className="text-blue-500 text-xl" />}
+                    color="bg-blue-50"
+                  />
+                </div>
+              </section>
+
+              {/* Review Stats Section */}
+              <section className="mb-12">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <FaStar className="text-[#ff385c] mr-3" />
+                  Review Statistics
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard 
+                    title="Average Rating"
+                    value={reviewStats.average_rating}
+                    icon={<FaStar className="text-yellow-500 text-xl" />}
+                    color="bg-yellow-50"
+                  />
+                  <StatCard 
+                    title="Total Reviews"
+                    value={reviewStats.total_reviews}
+                    icon={<FaUsers className="text-blue-500 text-xl" />}
+                    color="bg-blue-50"
+                  />
+                </div>
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Latest Reviews</h3>
+                  <ul className="divide-y divide-gray-200">
+                    {reviewStats.latestReviews && reviewStats.latestReviews.length > 0 ? (
+                      reviewStats.latestReviews.map((review, idx) => (
+                        <li key={idx} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <span className="font-bold text-gray-900">{safe(review.reviewer_name) || 'Anonymous'}</span> on <span className="font-medium text-gray-700">{safe(review.property_name)}</span>
+                            <span className="ml-2 text-yellow-500">{safe(review.rating)}★</span>
+                          </div>
+                          <div className="text-gray-600 mt-2 md:mt-0">{safe(review.comment)}</div>
+                          <div className="text-gray-400 text-xs mt-1 md:mt-0">{safe(review.created_at)?.slice(0, 10)}</div>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="py-4 text-gray-500">No reviews found.</li>
+                    )}
+                  </ul>
+                </div>
+              </section>
+
+              {/* Current Guests Section */}
+              <section className="mb-12">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <FaUsers className="text-[#ff385c] mr-3" />
+                  Current Guests
+                </h2>
+                <ul className="divide-y divide-gray-200">
+                  {currentGuests.length > 0 ? (
+                    currentGuests.map((guest, idx) => (
+                      <li key={idx} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <span className="font-bold text-gray-900">{safe(guest.guest_name) || 'Anonymous'}</span> at <span className="font-medium text-gray-700">{safe(guest.property_name)}</span>
                         </div>
-                      </div>
-                      <p className="text-gray-600 text-sm">{review.comment}</p>
-                      <p className="text-gray-500 text-xs mt-2">{review.date}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
+                        <div className="text-gray-600 mt-2 md:mt-0">Check-in: {safe(guest.start_date)} | Check-out: {safe(guest.end_date)}</div>
+                        <div className="text-gray-400 text-xs mt-1 md:mt-0">Guests: {safe(guest.guests)}</div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="py-4 text-gray-500">No current guests.</li>
+                  )}
+                </ul>
+              </section>
 
-          {/* Current Guests Section */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <FaUsers className="text-[#ff385c] mr-3" />
-              Current Guests
-            </h2>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-100/50 shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Guest Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Property</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Check-in</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Check-out</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {propertyStats.currentGuests.map((guest, index) => (
-                      <tr key={index} className="hover:bg-gray-50/50">
-                        <td className="px-6 py-4 text-sm text-gray-800">{guest.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{guest.property}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{guest.checkIn}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{guest.checkOut}</td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                            Active
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
+              {/* Upcoming Bookings Section */}
+              <section className="mb-12">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <FaCalendarAlt className="text-[#ff385c] mr-3" />
+                  Upcoming Bookings
+                </h2>
+                <ul className="divide-y divide-gray-200">
+                  {upcomingBookings.length > 0 ? (
+                    upcomingBookings.map((booking, idx) => (
+                      <li key={idx} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <span className="font-bold text-gray-900">{safe(booking.guest_name) || 'Anonymous'}</span> at <span className="font-medium text-gray-700">{safe(booking.property_name)}</span>
+                        </div>
+                        <div className="text-gray-600 mt-2 md:mt-0">Check-in: {safe(booking.start_date)} | Check-out: {safe(booking.end_date)}</div>
+                        <div className="text-gray-400 text-xs mt-1 md:mt-0">Guests: {safe(booking.guests)}</div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="py-4 text-gray-500">No upcoming bookings.</li>
+                  )}
+                </ul>
+              </section>
+            </>
+          )}
         </div>
       </div>
     </div>

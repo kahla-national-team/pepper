@@ -22,6 +22,7 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
     price,
     category,
     duration,
+    photo_url,
     image = '/placeholder-service.jpg',
     provider
   } = service;
@@ -99,7 +100,7 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
     >
       <div className="relative h-48">
         <img
-          src={image}
+          src={photo_url || image || '/placeholder-service.jpg'}
           alt={title}
           className="w-full h-full object-cover"
           onLoad={() => setIsLoading(false)}
@@ -195,9 +196,6 @@ const ServiceCard = ({ service, isSelected, onClick, onUnlike, isFavorite: initi
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-500">Service Provider</div>
-              <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                Verified
-              </div>
             </div>
           </div>
         ) : (
@@ -240,6 +238,7 @@ ServiceCard.propTypes = {
     price: PropTypes.string,
     category: PropTypes.string,
     duration: PropTypes.number,
+    photo_url: PropTypes.string,
     image: PropTypes.string,
     provider: PropTypes.shape({
       id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),

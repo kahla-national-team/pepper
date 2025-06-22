@@ -11,8 +11,7 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
-        ws: true,
-      }
+      },
     },
     headers: {
       'Access-Control-Allow-Origin': '*',
@@ -29,7 +28,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          cloudinary: ['cloudinary-react']
         },
       },
     },
@@ -38,8 +36,6 @@ export default defineConfig({
     include: ['react', 'react-dom', 'react-router-dom'],
   },
   define: {
-    'process.env': {
-      VITE_GOOGLE_MAPS_API_KEY: JSON.stringify('AIzaSyB1sD5MQKu-bQhgQWmTOzwjVCvPRMdpyMI')
-    }
+    global: 'globalThis',
   }
 })

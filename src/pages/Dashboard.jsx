@@ -9,6 +9,9 @@ import DashboardConciergeServices from "../pages/DashboardConciergeServices";
 import ServiceAnnouncements from '../components/Dashboard/ServiceAnnouncements';
 import ConciergeServiceForm from '../components/ConciergeServiceForm';
 import { getDashboardStats } from '../services/dashboardService';
+import PendingApprovalsWidget from '../components/Dashboard/PendingApprovalsWidget';
+import Sidebar from '../components/Dashboard/Sidebar';
+import { bookingService } from '../services/bookingService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -51,40 +54,25 @@ const Dashboard = () => {
   ]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState(null);
-
-  const recentActivities = [
-    {
-      title: 'New Rental Request',
-      time: '2 hours ago',
-      amount: '$150',
-      status: 'pending',
-      icon: <FaCar className="text-white" />,
-      iconBg: 'bg-[#ff385c]'
-    },
-    {
-      title: 'Property Booking',
-      time: '4 hours ago',
-      amount: '$500',
-      status: 'completed',
-      icon: <FaHome className="text-white" />,
-      iconBg: 'bg-[#ff385c]'
-    },
-    {
-      title: 'User Registration',
-      time: '5 hours ago',
-      amount: '-',
-      status: 'completed',
-      icon: <FaUsers className="text-white" />,
-      iconBg: 'bg-[#ff385c]'
-    }
-  ];
+  const [recentActivities, setRecentActivities] = useState([]);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchStatsAndActivities = async () => {
       try {
         const data = await getDashboardStats();
         setStats(data);
         setError(null);
+
+        // Fetch pending bookings for recent activity
+        const ownerBookings = await bookingService.getBookingsForOwner();
+        const pendingBookings = (ownerBookings.data || ownerBookings).filter(b => b.status === 'pending');
+        const activities = pendingBookings.map(b => ({
+          type: 'booking',
+          message: `Pending booking for ${b.user?.name || b.user || 'a user'}: ${b.service || b.property || b.title || 'Rental'} on ${b.date || b.start_date || ''}`,
+          timestamp: b.date || b.start_date || '',
+          status: b.status
+        }));
+        setRecentActivities(activities);
       } catch (err) {
         setError('Failed to load dashboard statistics');
         console.error('Error loading dashboard:', err);
@@ -93,7 +81,7 @@ const Dashboard = () => {
       }
     };
 
-    fetchStats();
+    fetchStatsAndActivities();
   }, []);
 
   const handleAddService = async (formData) => {
@@ -182,11 +170,13 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <Sidebar />
+      {/* Main Content */}
+      <main className="flex-1 p-8">
         <WelcomeSection />
-
-        {/* Quick Stats Overview */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <SummaryCard
             icon={FaHome}
@@ -197,7 +187,6 @@ const Dashboard = () => {
             trendValue={`${Math.round((stats.properties.active / stats.properties.total) * 100)}%`}
             iconBg="bg-[#ff385c]/100"
           />
-
           <SummaryCard
             icon={FaMoneyBillWave}
             title="Monthly Revenue"
@@ -207,7 +196,6 @@ const Dashboard = () => {
             trendValue={`${Math.round((stats.revenue.monthly / stats.revenue.ytd) * 100)}%`}
             iconBg="bg-green-500"
           />
-
           <SummaryCard
             icon={FaChartLine}
             title="Occupancy Rate"
@@ -217,7 +205,6 @@ const Dashboard = () => {
             trendValue={`${Math.round((stats.occupancy.newBookings / 30) * 100)}%`}
             iconBg="bg-blue-500"
           />
-
           <SummaryCard
             icon={FaStar}
             title="Average Rating"
@@ -228,59 +215,15 @@ const Dashboard = () => {
             iconBg="bg-yellow-500"
           />
         </div>
-
-        {/* Main Content */}
+        {/* Widgets and Activities */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Recent Activity */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            <PendingApprovalsWidget />
             <RecentActivity activities={recentActivities} />
           </div>
-
-          {/* Quick Actions */}
           <QuickActions />
         </div>
-
-     
-
-        {/* Service Announcements */}
-        <ServiceAnnouncements />
-
-        {/* Modal for Add Service Form */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-800">Add New Service</h2>
-                  <button
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setFormError(null);
-                    }}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    ✕
-                  </button>
-                </div>
-                
-                {formError && (
-                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-                    {formError}
-                  </div>
-                )}
-
-                <ConciergeServiceForm 
-                  onSubmit={handleAddService}
-                  onCancel={() => {
-                    setIsModalOpen(false);
-                    setFormError(null);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      </main>
     </div>
   );
 };

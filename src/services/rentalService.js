@@ -44,7 +44,9 @@ export const rentalService = {
 
   getRentals: async (filters = {}) => {
     try {
+      console.log('Sending filters to backend:', filters);
       const response = await api.get('/rentals', { params: filters });
+      console.log('Backend response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Get rentals error:', error);

@@ -132,7 +132,7 @@ const DetailsPage = () => {
               <div className="md:w-1/2 relative">
                 <img
                   className="w-full h-64 md:h-full object-cover"
-                  src={item?.image || '/placeholder-service.jpg'}
+                  src={item?.photo_url || item?.image || '/placeholder-service.jpg'}
                   alt={item?.title || 'Service'}
                   onError={(e) => {
                     e.target.onerror = null;
@@ -243,6 +243,11 @@ const DetailsPage = () => {
             </div>
           </motion.div>
 
+          {/* Reviews Section */}
+          <div className="mt-8">
+            <Review itemId={id} itemType={type === 'concierge' ? 'service' : type} />
+          </div>
+
           {/* Booking Section */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="bg-white rounded-xl shadow-sm p-6">
@@ -282,32 +287,6 @@ const DetailsPage = () => {
                 )
               )}
             </div>
-          </div>
-
-          {/* Reviews Section */}
-          <div className="mt-12 border-t border-gray-200 pt-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">Customer Reviews</h2>
-                <p className="text-gray-600 mt-1">What our customers are saying about this service</p>
-              </div>
-              <div className="mt-4 md:mt-0 flex items-center">
-                <FaStar className="text-yellow-400 mr-1" />
-                <span className="font-semibold">{item?.provider?.rating?.toFixed(1) || 'N/A'}</span>
-                <span className="text-gray-500 ml-1">
-                  ({item?.provider?.reviewCount || 0} reviews)
-                </span>
-              </div>
-            </div>
-
-            {/* Reviews Section */}
-            <Review 
-              itemId={id} 
-              itemType="service" 
-              onReviewSubmit={() => {
-                fetchItemDetails();
-              }}
-            />
           </div>
         </div>
       </div>

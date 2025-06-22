@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { FaMap, FaTimes } from 'react-icons/fa';
 import StaysCard from '../components/RENTALCard';
 import ServiceCard from '../components/ServiceCard';
-import RentalMap from '../components/RentalMap';
+import RentalsMap from '../components/RentalsMap';
 import MapToggleWrapper from '../components/MapToggleWrapper';
 import { useMapVisibility } from '../context/MapVisibilityContext';
 import SwipingSearchBar from '../components/SwipingSearchBar';
@@ -101,13 +101,10 @@ const Home = () => {
     bathrooms: 0
   });
   const [servicesFilters, setServicesFilters] = useState({
-    service: '',
-    serviceTypes: [],
-    when: '',
-    location: '',
-    urgency: '',
-    availability: '',
-    budget: { min: 0, max: 10000 }
+    name: '',
+    category: '',
+    priceRange: { min: 0, max: 10000 },
+    rating: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isServicesLoading, setIsServicesLoading] = useState(true);
@@ -118,6 +115,13 @@ const Home = () => {
   const { isMapVisible, setIsMapVisible } = useMapVisibility();
   const { activeMode } = useSearchMode();
 
+  // Set map hidden by default on mount
+  useEffect(() => {
+    setIsMapVisible(false);
+    // Only run on mount
+    // eslint-disable-next-line
+  }, []);
+
   // Fetch stays data
   useEffect(() => {
     const fetchStays = async () => {
@@ -125,25 +129,28 @@ const Home = () => {
         setIsLoading(true);
         const data = await rentalService.getRentals(staysFilters);
         
-        // Filter out rentals without coordinates and convert price to string
-        const validRentals = data.filter(rental => rental.location && 
-          typeof rental.location.lat === 'number' && 
-          typeof rental.location.lng === 'number'
-        ).map(rental => ({
+        // Show all rentals, but format them properly
+        const formattedRentals = data.map(rental => ({
           ...rental,
           price: `$${rental.price}/night`
         }));
         
-        setStays(validRentals);
+        setStays(formattedRentals);
         
         // Update map center if we have rentals with coordinates
-        if (validRentals.length > 0) {
-          // Calculate the average center of all rentals
-          const totalLat = validRentals.reduce((sum, rental) => sum + rental.location.lat, 0);
-          const totalLng = validRentals.reduce((sum, rental) => sum + rental.location.lng, 0);
+        const rentalsWithCoordinates = formattedRentals.filter(rental => 
+          rental.location && 
+          typeof rental.location.lat === 'number' && 
+          typeof rental.location.lng === 'number'
+        );
+        
+        if (rentalsWithCoordinates.length > 0) {
+          // Calculate the average center of all rentals with coordinates
+          const totalLat = rentalsWithCoordinates.reduce((sum, rental) => sum + rental.location.lat, 0);
+          const totalLng = rentalsWithCoordinates.reduce((sum, rental) => sum + rental.location.lng, 0);
           setMapCenter({
-            lat: totalLat / validRentals.length,
-            lng: totalLng / validRentals.length
+            lat: totalLat / rentalsWithCoordinates.length,
+            lng: totalLng / rentalsWithCoordinates.length
           });
         }
         
@@ -167,7 +174,7 @@ const Home = () => {
     const fetchConciergeServices = async () => {
       try {
         setIsServicesLoading(true);
-        const response = await conciergeService.getAllServices();
+        const response = await conciergeService.getAllServices(servicesFilters);
         if (response.success) {
           // Convert price to string format and map name to title for ServiceCard
           const servicesWithStringPrice = response.data.map(service => ({
@@ -193,7 +200,7 @@ const Home = () => {
     if (activeMode === 'services') {
       fetchConciergeServices();
     }
-  }, [activeMode]);
+  }, [servicesFilters, activeMode]);
 
   const handleSearch = (value) => {
     if (activeMode === 'stays') {
@@ -204,7 +211,7 @@ const Home = () => {
     } else {
       setServicesFilters(prev => ({
         ...prev,
-        service: value
+        name: value // Map to 'name' for service search
       }));
     }
   };
@@ -292,7 +299,7 @@ const Home = () => {
       {/* Main content */}
       <div className="flex min-h-screen">
         <div className={`transition-all duration-300 ${isMapVisible ? 'lg:w-1/2 lg:pl-8' : 'w-full'}`}>
-          <main className={`py-4 sm:py-8 pt-[200px] ${isMapVisible ? 'pr-4' : 'container mx-auto px-4'}`}> {/* Adjusted padding-top for navbar + search bar */}
+          <main className={`py-4 sm:pt-[200px] ${isMapVisible ? 'pr-4' : 'container mx-auto px-4'}`}> {/* Adjusted padding-top for navbar + search bar */}
             {/* Stays Section - Only show when in stays mode */}
             {activeMode === 'stays' && (
               <Section
@@ -325,10 +332,10 @@ const Home = () => {
         {activeMode === 'stays' && isMapVisible && (
           <div className="hidden lg:block lg:w-1/2 lg:pl-4 lg:pr-8">
             <div className="sticky top-16 h-[calc(100vh-4rem)]">
-              <RentalMap 
+              <RentalsMap
                 rentals={stays}
                 selectedRental={selectedStay}
-                onRentalSelect={handleStaySelect}
+                onRentalSelect={setSelectedStay}
                 initialCenter={mapCenter}
               />
             </div>

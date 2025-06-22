@@ -21,7 +21,14 @@ const NotificationSidebar = () => {
   const [selectedSender, setSelectedSender] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  const getNotificationIcon = (type) => {
+  const getNotificationIcon = (type, message) => {
+    if (type === 'success' || (message && message.toLowerCase().includes('success'))) {
+      return '✅';
+    }
+    if (type === 'acceptance' && message && message.toLowerCase().includes('accepted')) {
+      // Special icon for booking accepted
+      return <span style={{color: 'green', fontWeight: 'bold'}} title="Booking Accepted">✔️</span>;
+    }
     switch (type) {
       case 'booking':
         return '📅';
@@ -147,7 +154,7 @@ const NotificationSidebar = () => {
             >
               <div className="flex items-start gap-3">
                 <span className="text-xl">
-                  {getNotificationIcon(notification.type)}
+                  {getNotificationIcon(notification.type, notification.message)}
                 </span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">

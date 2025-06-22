@@ -8,7 +8,11 @@ const auth = require('../middleware/auth');
 // Get all rentals with filtering
 router.get('/', async (req, res) => {
   try {
-    const { destination, guests, rating, favorites, priceRange, duration } = req.query;
+    const { destination, guests, rating, favorites, priceRange, duration, amenities } = req.query;
+    console.log('Received query parameters:', req.query);
+    console.log('Amenities filter:', amenities);
+    console.log('Amenities type:', typeof amenities);
+    console.log('Amenities is array:', Array.isArray(amenities));
     let query = `
       SELECT 
         r.id,
@@ -22,6 +26,7 @@ router.get('/', async (req, res) => {
         r.bedrooms,
         r.bathrooms,
         r.max_guests,
+        r.amenities,
         u.username as provider_name,
         u.profile_image as provider_image,
         COALESCE(AVG(rv.rating), 0) as provider_rating,
@@ -63,12 +68,34 @@ router.get('/', async (req, res) => {
       }
     }
 
+    // Add amenities filtering
+    if (amenities && amenities.length > 0) {
+      // Handle both array and string formats
+      let amenitiesArray = amenities;
+      if (typeof amenities === 'string') {
+        try {
+          amenitiesArray = JSON.parse(amenities);
+        } catch (e) {
+          // If it's not JSON, treat it as a single amenity
+          amenitiesArray = [amenities];
+        }
+      }
+      
+      if (Array.isArray(amenitiesArray) && amenitiesArray.length > 0) {
+        const amenityConditions = amenitiesArray.map((amenity, index) => {
+          queryParams.push(amenity);
+          return `$${queryParams.length} = ANY(r.amenities)`;
+        });
+        conditions.push(`(${amenityConditions.join(' AND ')})`);
+      }
+    }
+
     if (conditions.length > 0) {
       query += ' AND ' + conditions.join(' AND ');
     }
 
     query += `
-      GROUP BY r.id, u.username, u.profile_image
+      GROUP BY r.id, u.username, u.profile_image, r.amenities
     `;
 
     // Add HAVING clause for rating filter (aggregate function)
@@ -103,7 +130,8 @@ router.get('/', async (req, res) => {
       address: rental.address,
       bedrooms: rental.bedrooms || 0,
       bathrooms: rental.bathrooms || 0,
-      max_guests: rental.max_guests || 1
+      max_guests: rental.max_guests || 1,
+      amenities: rental.amenities || []
     }));
 
     res.json(formattedRentals);
@@ -204,8 +232,36 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Use the exported functions directly
-router.post('/', rentalController.create);
-router.put('/:id', rentalController.update);
+router.post('/', (req, res, next) => {
+  const upload = req.app.locals.upload;
+  upload.single('photo')(req, res, (err) => {
+    if (err) {
+      console.error('File upload error:', err);
+      return res.status(400).json({ message: 'Error uploading file', error: err.message });
+    }
+    if (req.file) {
+      req.body.image = req.file.path;
+    }
+    next();
+  });
+}, rentalController.create);
+
+// Update a property with file upload
+router.put('/:id', (req, res, next) => {
+  const upload = req.app.locals.upload;
+  upload.single('photo')(req, res, (err) => {
+    if (err) {
+      console.error('File upload error:', err);
+      return res.status(400).json({ message: 'Error uploading file', error: err.message });
+    }
+    // Add the uploaded file URL to the request body
+    if (req.file) {
+      req.body.image = req.file.path;
+    }
+    next();
+  });
+}, rentalController.update);
+
 router.delete('/:id', rentalController.deactivate);
 
 // Get all rental locations
