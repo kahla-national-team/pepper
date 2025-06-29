@@ -319,8 +319,8 @@ const userController = {
 
       // Generate new token
       const newToken = jwt.sign(
-        { id: user.id, username: user.username },
-        process.env.JWT_SECRET,
+        { id: decoded.id, username: decoded.username },
+        config.jwtSecret,
         { expiresIn: '7d' }
       );
 

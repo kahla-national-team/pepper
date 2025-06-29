@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const config = require('../config/config');
 const { Pool } = require('pg');
 
 const pool = new Pool({
@@ -36,7 +37,7 @@ router.post('/register', async (req, res) => {
     // Create token
     const token = jwt.sign(
       { id: result.rows[0].id },
-      process.env.JWT_SECRET,
+      config.jwtSecret,
       { expiresIn: '1d' }
     );
 
@@ -80,7 +81,7 @@ router.post('/login', async (req, res) => {
     // Create token
     const token = jwt.sign(
       { id: user.id },
-      process.env.JWT_SECRET,
+      config.jwtSecret,
       { expiresIn: '1d' }
     );
 

@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: pepper-postgres
+    environment:
+      POSTGRES_DB: ${PG_DATABASE:-butler}
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-dembele}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init-db.js:/docker-entrypoint-initdb.d/init-db.js
+    ports:
+      - "5432:5432"
+    networks:
+      - pepper-network
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pepper-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - PG_HOST=postgres
+      - PG_DATABASE=${PG_DATABASE:-butler}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_PASSWORD=${PG_PASSWORD:-dembele}
+      - PG_PORT=5432
+      - JWT_SECRET=${JWT_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    networks:
+      - pepper-network
+    restart: unless-stopped
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # Frontend React App
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pepper-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - pepper-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  pepper-network:
+    driver: bridge 
