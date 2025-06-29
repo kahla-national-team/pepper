@@ -44,8 +44,14 @@ export const rentalService = {
 
   getRentals: async (filters = {}) => {
     try {
-      console.log('Sending filters to backend:', filters);
-      const response = await api.get('/rentals', { params: filters });
+      // Flatten guests object to a totalGuests number if needed
+      let params = { ...filters };
+      if (params.guests && typeof params.guests === 'object') {
+        const { adults = 0, children = 0, babies = 0 } = params.guests;
+        params.guests = adults + children + babies;
+      }
+      console.log('Sending filters to backend:', params);
+      const response = await api.get('/rentals', { params });
       console.log('Backend response:', response.data);
       return response.data;
     } catch (error) {
