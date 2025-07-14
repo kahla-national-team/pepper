@@ -5,17 +5,12 @@ import FormInput from './FormInput';
 import Button from './Button';
 import OpenStreetMap from './OpenStreetMap';
 import { useOpenStreetMap } from '../contexts/OpenStreetMapProvider';
-import { FaHome } from 'react-icons/fa';
-
-const amenitiesList = [
-  'WiFi', 'Kitchen', 'Free parking', 'Air conditioning', 'Heating',
-  'Washer', 'Dryer', 'TV', 'Pool', 'Gym', 'Pet friendly', 'Balcony'
-];
 
 const EditRentalForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { isLoaded: isOpenStreetMapLoaded, loadError: openStreetMapError } = useOpenStreetMap();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -33,10 +28,10 @@ const EditRentalForm = () => {
     amenities: [],
     images: []
   });
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState('');
+
+  const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [error, setError] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
@@ -45,13 +40,12 @@ const EditRentalForm = () => {
     if (id) {
       fetchRental();
     }
-    // eslint-disable-next-line
   }, [id]);
 
     const fetchRental = async () => {
       try {
       setFetching(true);
-      const response = await rentalService.getRental(id);
+      const response = await rentalService.getRentalById(id);
       if (response.success) {
         const rental = response.data;
         setFormData({
@@ -71,35 +65,32 @@ const EditRentalForm = () => {
           amenities: rental.amenities || [],
           images: []
         });
+        
         if (rental.latitude && rental.longitude) {
           setSelectedLocation({
             lat: parseFloat(rental.latitude),
             lng: parseFloat(rental.longitude)
           });
         }
+        
         if (rental.image) {
           setPreviewUrl(rental.image);
         }
-      } else {
-        setServerError('Failed to load rental data');
         }
       } catch (error) {
-      setServerError('Failed to load rental data');
+        console.error('Error fetching rental:', error);
+      setError('Failed to load rental data');
       } finally {
       setFetching(false);
       }
     };
 
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-    setServerError('');
   };
 
   const handleAmenityChange = (amenity) => {
@@ -108,6 +99,14 @@ const EditRentalForm = () => {
       amenities: prev.amenities.includes(amenity)
         ? prev.amenities.filter(a => a !== amenity)
         : [...prev.amenities, amenity]
+    }));
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    setFormData(prev => ({
+      ...prev,
+      images: files
     }));
   };
 
@@ -121,38 +120,15 @@ const EditRentalForm = () => {
     }));
   };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setFormData(prev => ({
-      ...prev,
-      images: files
-    }));
-    if (files[0]) {
-      setPreviewUrl(URL.createObjectURL(files[0]));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.title?.trim()) newErrors.title = 'Title is required';
-    if (!formData.description?.trim()) newErrors.description = 'Description is required';
-    if (!formData.price || isNaN(formData.price) || formData.price <= 0) newErrors.price = 'Valid price is required';
-    if (!formData.address) newErrors.address = 'Address is required';
-    if (!formData.city) newErrors.city = 'City is required';
-    if (!formData.bedrooms || isNaN(formData.bedrooms) || formData.bedrooms < 0) newErrors.bedrooms = 'Valid number of bedrooms is required';
-    if (!formData.bathrooms || isNaN(formData.bathrooms) || formData.bathrooms < 0) newErrors.bathrooms = 'Valid number of bathrooms is required';
-    if (!formData.maxGuests || isNaN(formData.maxGuests) || formData.maxGuests < 1) newErrors.maxGuests = 'Valid number of guests is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setServerError('');
-    if (!validateForm()) return;
-    setIsSubmitting(true);
+    setLoading(true);
+    setError('');
+
     try {
       const formDataToSend = new FormData();
+        
+      // Add all form fields
       Object.keys(formData).forEach(key => {
         if (key === 'images') {
           formData.images.forEach(image => {
@@ -164,22 +140,31 @@ const EditRentalForm = () => {
           formDataToSend.append(key, formData[key]);
         }
       });
+
       const response = await rentalService.updateRental(id, formDataToSend);
+      
       if (response.success) {
         navigate('/dashboard');
       } else {
-        setServerError(response.message || 'Failed to update rental');
+        setError(response.message || 'Failed to update rental');
       }
     } catch (err) {
-      setServerError('Failed to update rental. Please try again.');
+      console.error('Error updating rental:', err);
+      setError('Failed to update rental. Please try again.');
       } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
+
+  const amenities = [
+    'WiFi', 'Kitchen', 'Free parking', 'Air conditioning', 'Heating',
+    'Washer', 'Dryer', 'TV', 'Pool', 'Gym', 'Pet friendly', 'Balcony'
+  ];
 
   const center = selectedLocation 
     ? [selectedLocation.lat, selectedLocation.lng]
     : [40.7128, -74.0060]; // Default to NYC
+
   const markers = selectedLocation ? [{
     position: [selectedLocation.lat, selectedLocation.lng],
     title: 'Selected Location'
@@ -197,100 +182,134 @@ const EditRentalForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex items-center justify-center mb-8">
-            <FaHome className="text-[#ff385c] text-4xl mr-3" />
-            <h2 className="text-3xl font-bold text-gray-900">Edit Rental</h2>
-          </div>
-          {serverError && (
-            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">{serverError}</div>
-          )}
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Edit Rental</h1>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-xl font-semibold mb-4">Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormInput
-                  type="text"
+                label="Property Title"
                   name="title"
                   value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Property Title"
+                onChange={handleInputChange}
                   required
-                  error={errors.title}
                 />
+                
                 <FormInput
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="City"
+                label="Price per Night ($)"
+                name="price"
+                type="number"
+                value={formData.price}
+                onChange={handleInputChange}
                   required
-                  error={errors.city}
                 />
               </div>
-              <div className="mt-4">
-                <textarea
+
+            <FormInput
+              label="Description"
                   name="description"
                   value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Property Description"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff385c] focus:border-transparent"
-                  rows="4"
-                />
-                {errors.description && <div className="text-red-500 text-sm mt-1">{errors.description}</div>}
-              </div>
-            </div>
-            {/* Location */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-xl font-semibold mb-4">Location</h3>
-              <div className="space-y-4">
+              onChange={handleInputChange}
+              required
+              multiline
+              rows={4}
+            />
+
+            {/* Address Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormInput
-                  type="text"
+                label="Address"
                   name="address"
                   value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Full Address"
+                onChange={handleInputChange}
                   required
-                  error={errors.address}
                   />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
                   <FormInput
-                    type="number"
-                    name="latitude"
-                    value={formData.latitude}
-                    onChange={handleChange}
-                    placeholder="Latitude"
-                    step="any"
-                  />
-                  <FormInput
-                    type="number"
-                    name="longitude"
-                    value={formData.longitude}
-                    onChange={handleChange}
-                    placeholder="Longitude"
-                    step="any"
+                label="City"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                required
                   />
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <FormInput
+                label="State"
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
+                required
+              />
+              
+              <FormInput
+                label="ZIP Code"
+                name="zipCode"
+                value={formData.zipCode}
+                onChange={handleInputChange}
+                required
+              />
+              
+              <FormInput
+                label="Country"
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            {/* Property Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormInput
+                label="Bedrooms"
+                name="bedrooms"
+                  type="number"
+                value={formData.bedrooms}
+                onChange={handleInputChange}
+                  required
+                />
+                
+                <FormInput
+                label="Bathrooms"
+                name="bathrooms"
+                  type="number"
+                value={formData.bathrooms}
+                onChange={handleInputChange}
+                required
+              />
+              
+              <FormInput
+                label="Max Guests"
+                name="maxGuests"
+                type="number"
+                value={formData.maxGuests}
+                onChange={handleInputChange}
+                  required
+              />
               </div>
-            </div>
-            {/* Location Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Property Location</label>
-              <div className="w-full h-[400px] rounded-lg overflow-hidden">
+
+            {/* Map Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Location</h3>
+              <p className="text-sm text-gray-600">Click on the map to set the property location</p>
+              
               {!isOpenStreetMapLoaded ? (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
                   <div className="text-center">
-                      <div className="w-8 h-8 border-2 border-gray-300 border-t-[#ff385c] rounded-full animate-spin mx-auto mb-2"></div>
-                      <p className="text-gray-500">Loading map...</p>
-                    </div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-gray-600">Loading map...</p>
                   </div>
+                </div>
               ) : openStreetMapError ? (
-                  <div className="w-full h-full bg-red-50 flex items-center justify-center">
-                    <div className="text-center text-red-600">
-                      <p>Error loading map. Please refresh the page.</p>
+                <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-red-500">Error loading map</p>
+                    <p className="text-sm text-gray-600">{openStreetMapError.message}</p>
                   </div>
                 </div>
               ) : (
@@ -303,100 +322,87 @@ const EditRentalForm = () => {
                   width="100%"
                 />
               )}
-              </div>
-              <div className="mt-2 text-sm text-gray-500">Click on the map to select your property location</div>
-            </div>
-            {/* Latitude and Longitude fields (read-only) */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
-                <input
-                  type="text"
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormInput
+                  label="Latitude"
                   name="latitude"
                   value={formData.latitude}
+                  onChange={handleInputChange}
+                  required
                   readOnly
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#ff385c] focus:border-[#ff385c] bg-gray-50"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
-                <input
-                  type="text"
+                
+                <FormInput
+                  label="Longitude"
                   name="longitude"
                   value={formData.longitude}
+                  onChange={handleInputChange}
+                  required
                   readOnly
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#ff385c] focus:border-[#ff385c] bg-gray-50"
                 />
               </div>
             </div>
-            {/* Property Details */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-xl font-semibold mb-4">Property Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormInput
-                  type="number"
-                  name="bedrooms"
-                  value={formData.bedrooms}
-                  onChange={handleChange}
-                  placeholder="Bedrooms"
-                  required
-                  error={errors.bedrooms}
-                />
-                <FormInput
-                  type="number"
-                  name="bathrooms"
-                  value={formData.bathrooms}
-                  onChange={handleChange}
-                  placeholder="Bathrooms"
-                  required
-                  error={errors.bathrooms}
-                />
-                <FormInput
-                  type="number"
-                  name="maxGuests"
-                  value={formData.maxGuests}
-                  onChange={handleChange}
-                  placeholder="Max Guests"
-                  required
-                  error={errors.maxGuests}
-                />
-              </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {amenitiesList.map((amenity) => (
+
+            {/* Amenities */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Amenities</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {amenities.map(amenity => (
                   <label key={amenity} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
                       checked={formData.amenities.includes(amenity)}
                       onChange={() => handleAmenityChange(amenity)}
-                        className="form-checkbox h-4 w-4 text-[#ff385c]"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                      <span className="text-gray-700">{amenity}</span>
+                    <span className="text-sm text-gray-700">{amenity}</span>
                   </label>
                 ))}
-                </div>
               </div>
             </div>
-            {/* Image Upload */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-xl font-semibold mb-4">Property Image</h3>
+
+            {/* Images */}
+              <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Property Images</h3>
+              {previewUrl && (
+                <div className="mb-4">
+                        <img
+                    src={previewUrl} 
+                    alt="Current rental" 
+                    className="w-32 h-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
                     <input
                       type="file"
+                multiple
                       accept="image/*"
-                multiple={false}
                       onChange={handleImageChange}
-                ref={fileInputRef}
-                className="mb-4"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
-              {previewUrl && (
-                <img src={previewUrl} alt="Preview" className="w-full max-h-64 object-cover rounded-lg border" />
-              )}
                 </div>
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <p className="text-red-800">{error}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                variant="secondary"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                loading={loading}
+                disabled={loading}
+              >
+                Update Rental
               </Button>
             </div>
           </form>

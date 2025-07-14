@@ -36,7 +36,6 @@ function SearchBar({ onSearch, onFilterChange, filters = {} }) {
   const defaultFilters = {
     service: filters.service || '',
     serviceTypes: filters.serviceTypes || [],
-    category: filters.category || '',
     when: filters.when || '',
     location: filters.location || '',
     urgency: filters.urgency || '',
@@ -158,16 +157,6 @@ function SearchBar({ onSearch, onFilterChange, filters = {} }) {
     }
     setShowSuggestions(false);
     if (onSearch) onSearch(suggestion.name);
-  };
-
-  const handleCategoryChange = (e) => {
-    const value = e.target.value;
-    if (onFilterChange) {
-      onFilterChange({
-        ...defaultFilters,
-        category: value
-      });
-    }
   };
 
   return (
@@ -296,20 +285,6 @@ function SearchBar({ onSearch, onFilterChange, filters = {} }) {
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div className="filter-section">
-              <h3>Category</h3>
-              <select
-                className="category-dropdown"
-                value={defaultFilters.category}
-                onChange={handleCategoryChange}
-              >
-                <option value="">All Categories</option>
-                {serviceCategories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
             </div>
 
             <div className="filter-section">
