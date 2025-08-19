@@ -5,7 +5,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'butler',
   password: 'dembele',
-  port: 5432,
+  port: 5432, // Default PostgreSQL port  
 });
 
 // Test the connection

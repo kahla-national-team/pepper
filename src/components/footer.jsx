@@ -45,7 +45,7 @@ const Footer = () => {
           <ul className="text-gray-400 space-y-4">
             <li className="flex items-start gap-4">
               <i className="fas fa-map-marker-alt text-pink-600 mt-1"></i>
-              <span>123 Luxury Lane, Suite 100<br />New York, NY 10001</span>
+              <span>123 Luxury Lane, Suite 100<br />Oran Algeria, 31001</span>
             </li>
             <li className="flex items-center gap-4">
               <i className="fas fa-phone text-pink-600"></i>

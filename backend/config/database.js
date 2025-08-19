@@ -3,7 +3,7 @@ require('dotenv').config();
 
 // Create Sequelize instance
 const sequelize = new Sequelize(
-  process.env.PG_DATABASE || 'butlerdb',
+  process.env.PG_DATABASE || 'butler',
   process.env.PG_USER || 'postgres',
   process.env.PG_PASSWORD || 'dembele',
   {

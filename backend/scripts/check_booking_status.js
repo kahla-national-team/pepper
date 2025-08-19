@@ -4,7 +4,7 @@ require('dotenv').config();
 const pool = new Pool({
   user: process.env.PG_USER || 'postgres',
   host: process.env.PG_HOST || 'localhost',
-  database: process.env.PG_DATABASE || 'butlerdb',
+  database: process.env.PG_DATABASE || 'butler',
   password: process.env.PG_PASSWORD || 'dembele',
   port: process.env.PG_PORT || 5432,
 });
@@ -12,7 +12,7 @@ const pool = new Pool({
 async function checkBookingStatus() {
   const client = await pool.connect();
   try {
-    // Check column type
+    // Check column type  
     const columnInfo = await client.query(`
       SELECT column_name, data_type, udt_name
       FROM information_schema.columns
