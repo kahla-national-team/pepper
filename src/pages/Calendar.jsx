@@ -59,8 +59,8 @@ const Calendar = () => {
       type: 'car',
       bookings: [
         {
-          startDate: new Date(2024, 2, 15),
-          endDate: new Date(2024, 2, 20),
+          startDate: new Date(2025, 6, 15),
+          endDate: new Date(2025, 7, 30),
           type: 'service',
           status: 'confirmed'
         }
