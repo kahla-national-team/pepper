@@ -1,0 +1,23 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "services": {
+    "backend": {
+      "rootDirectory": "backend",
+      "buildCommand": "npm ci --omit=dev",
+      "startCommand": "npm start",
+      "env": {
+        "NIXPACKS_NODE_VERSION": "18"
+      }
+    },
+    "frontend": {
+      "rootDirectory": ".",
+      "buildCommand": "npm ci && npm run build",
+      "startCommand": "npm run preview -- --host 0.0.0.0 --port ${PORT:-3000}",
+      "env": {
+        "NIXPACKS_NODE_VERSION": "18"
+      }
+    }
+  }
+}
+
+
