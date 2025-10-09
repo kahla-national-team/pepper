@@ -498,7 +498,7 @@ function SwipingSearchBar({ onSearch, onFilterChange, filters = {} }) {
                   className="w-full border-none outline-none text-sm text-gray-900 bg-transparent cursor-pointer placeholder-gray-400"
                 />
                 {isGuestOpen && (
-                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl z-50 mt-2 p-4">
+                  <div className="absolute top-full left-0 right-35 bg-white border border-gray-200 rounded-xl shadow-xl z-50 mt-2 p-4">
                     {['adults', 'children', 'babies'].map((type) => (
                       <div className="flex items-center justify-between mb-4 last:mb-0" key={type}>
                         <div>
