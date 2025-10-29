@@ -2,23 +2,34 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 // Create Sequelize instance
-const sequelize = new Sequelize(
-  process.env.PG_DATABASE || 'butler',
-  process.env.PG_USER || 'postgres',
-  process.env.PG_PASSWORD || 'dembele',
-  {
-    host: process.env.PG_HOST || 'localhost',
-    port: process.env.PG_PORT || 5432,
+let sequelize;
+if (process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING) {
+  sequelize = new Sequelize(process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING, {
     dialect: 'postgres',
-    logging: false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+    dialectOptions: {
+      ssl: { require: true, rejectUnauthorized: false }
+    },
+    logging: false
+  });
+} else {
+  sequelize = new Sequelize(
+    process.env.PG_DATABASE || 'butler',
+    process.env.PG_USER || 'postgres',
+    process.env.PG_PASSWORD || 'dembele',
+    {
+      host: process.env.PG_HOST || 'localhost',
+      port: process.env.PG_PORT || 5432,
+      dialect: 'postgres',
+      logging: false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      }
     }
-  }
-);
+  );
+}
 
 // Test the connection
 sequelize.authenticate()

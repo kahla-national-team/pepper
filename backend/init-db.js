@@ -1,20 +1,29 @@
 const { Pool } = require('pg');
 const config = require('./config/config');
+require('dotenv').config();
 const User = require('./models/User');
 const createBookingStatusType = require('./migrations/create_booking_status_type');
 const updateBookingsStatusColumn = require('./migrations/update_bookings_status_column');
 
 async function initializeDatabase() {
-  // Create a pool for the default postgres database
-  const pool = new Pool({
-    ...config.pgConfig,
-    database: 'postgres' // Connect to default database first
-  });
+  // If using a hosted database (Neon), connect directly using connection string with SSL
+  const connectionString = process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING;
+  const isHosted = Boolean(connectionString);
+  const pool = isHosted
+    ? new Pool({ connectionString, ssl: { rejectUnauthorized: false } })
+    : new Pool({
+        ...config.pgConfig,
+        database: 'postgres' // Connect to default database first for local
+      });
 
   try {
-    // Create the database if it doesn't exist
-    await pool.query(`CREATE DATABASE ${config.pgConfig.database}`);
-    console.log(`Database ${config.pgConfig.database} created successfully`);
+    if (!isHosted) {
+      // Create the local database if it doesn't exist
+      await pool.query(`CREATE DATABASE ${config.pgConfig.database}`);
+      console.log(`Database ${config.pgConfig.database} created successfully`);
+    } else {
+      console.log('Hosted database detected; skipping database creation.');
+    }
   } catch (error) {
     if (error.code === '42P04') {
       console.log(`Database ${config.pgConfig.database} already exists`);
@@ -27,7 +36,9 @@ async function initializeDatabase() {
   }
 
   // Create a new pool for our application database
-  const appPool = new Pool(config.pgConfig);
+  const appPool = isHosted
+    ? new Pool({ connectionString, ssl: { rejectUnauthorized: false } })
+    : new Pool(config.pgConfig);
   const userModel = new User(appPool);
 
   try {

@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+require('dotenv').config();
 
 const connectionString = process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING;
 
@@ -15,13 +16,5 @@ const pool = connectionString
       port: process.env.PG_PORT || 5432,
     });
 
-// Test the connection
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Database connection error:', err);
-  } else {
-    console.log('Database connected successfully');
-  }
-});
+module.exports = pool;
 
-module.exports = pool; 
